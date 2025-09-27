@@ -1,0 +1,50 @@
+# Archivos generados por el sistema operativo y editores
+.DS_Store
+*.log
+*.pyc
+*.swp
+.history
+
+# Archivos de configuración de IDEs
+# Comenta la siguiente línea si quieres compartir la configuración de VS Code
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Archivos y directorios de Dart y Flutter
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+/build/
+/coverage/
+
+# Archivos de compilación y ofuscación
+app.*.symbols
+app.*.map.json
+
+# Archivos de Android
+# Ignora las claves y propiedades locales que no deben ser versionadas.
+/android/key.properties
+/android/local.properties
+# Ignora los archivos generados por Gradle y la compilación de Android.
+/android/.gradle/
+/android/app/build/
+# Los siguientes son ejecutables que pueden ser regenerados.
+/android/gradlew
+/android/gradlew.bat
+
+# Archivos de iOS
+# Ignora los Pods y el Podfile.lock que se instalan localmente.
+/ios/Pods/
+/ios/Podfile.lock
+# Ignora los archivos generados por Flutter y Xcode.
+/ios/Flutter/App.framework
+/ios/Flutter/engine.xcconfig
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+/ios/.symlinks/
+/ios/Runner/GeneratedPluginRegistrant.*
