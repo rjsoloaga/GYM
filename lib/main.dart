@@ -3,6 +3,7 @@ import 'package:gym/pages/lista_socios_screen.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sqflite/sqflite.dart';
+import 'repositories/database_helper.dart';
 
 
 Future<void> main() async {
@@ -11,7 +12,7 @@ Future<void> main() async {
     // Inicializa la fábrica de bases de datos FFI
     databaseFactory = databaseFactoryFfiWeb;
   }
-
+  
   runApp(const MyApp());
 }
 

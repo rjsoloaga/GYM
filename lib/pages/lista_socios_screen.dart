@@ -90,10 +90,12 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
     // Aqui luego navegaremos a la pantalla de agregar socio
     print('Agregar nuevo socio');
 
+    final dniUnico = DateTime.now().millisecondsSinceEpoch.toString();
+
     // Ejemplo de como agregar un socio de prueba
     final nuevoSocio = Socio(
       nombreCompleto: "Nuevo Socio",
-      dni: "99999999",
+      dni: dniUnico,
       telefono: "123456789",
       fechaInicio: DateTime.now(),
       fechaVencimiento: DateTime.now().add(const Duration(days: 30)),

@@ -1,0 +1,15 @@
+{
+  "name": "Flutter Gym App",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "flutter-dev",
+  "workspaceFolder": "/app",
+  "forwardPorts": [39421],
+  "extensions": [
+    "Dart-Code.flutter",
+    "Dart-Code.dart-code"
+  ],
+  "settings": {
+    "dart.flutterSdkPath": "/flutter/bin"
+  },
+  "postCreateCommand": "flutter pub get"
+}
