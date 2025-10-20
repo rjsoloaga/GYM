@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gym/blocs/socios_bloc.dart';
 import 'package:gym/models/socio.dart';
 
 
 class AgregarSocioScreen extends StatefulWidget {
-    const AgregarSocioScree({super.key});
+    const AgregarSocioScreen({super.key});
 
     @override
     State<AgregarSocioScreen> createState() => _AgregarSocioScreenState();
 }
 
-class _AgregarSocioScreenState estend State<AgregarSocioScreen> {
+class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     //Controladores para los campos de texto
     final _nombreController = TextEditingController();
     final _dniController = TextEditingController();
@@ -30,39 +32,46 @@ class _AgregarSocioScreenState estend State<AgregarSocioScreen> {
                         TextField(
                             controller: _nombreController,
                             decoration: const InputDecoration(
-                                labelText: 'Nombre Completo',
-                                border: outlineInputBorder(),
+                                labelText: 'Nombre Completo *',
+                                border: OutlineInputBorder(),
                             ),
                         ),
 
-                        textField(
+                        TextField(
                             controller: _dniController,
                             decoration: const InputDecoration(
-                                labelText; 'DNI',
-                                border:outlineInputBorder(),
+                                labelText: 'DNI *',
+                                border: OutlineInputBorder(),
                             ),
-                            keyboardType: TextInputTipe.number,
+                            keyboardType: TextInputType.number,
                         ),
 
-                        textField(
+                        const SizedBox(height: 16),
+                        TextField(
                             controller: _telefonoController,
                             decoration: const InputDecoration(
                                 labelText: 'Teléfono',
-                                border: outlineInputBorder(),
+                                border: OutlineInputBorder(),
                             ),
+                            keyboardType: TextInputType.phone,
                         ),
 
-                        textField(
-                            controller: _precioController
+                        const SizedBox(height: 16),
+                        TextField(
+                            controller: _precioController,
                             decoration: const InputDecoration(
                                 labelText: 'Precio Mensual',
-                                border: outlineInputBorder(),
+                                border: OutlineInputBorder(),
                             ),
+                            keyboardType: TextInputType.number,
                         ),
 
-                        cont SizedBox(height: 24),
+                        const SizedBox(height: 24),
                         ElevatedButton(
                             onPressed: _guardarSocio,
+                            style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(double.infinity, 50),
+                            ),
                             child: const Text('Guardar Socio'),
                         ),
                     ],
@@ -73,12 +82,14 @@ class _AgregarSocioScreenState estend State<AgregarSocioScreen> {
 
     void _guardarSocio() {
         final nombre = _nombreController.text;
-        final dni = _ dniController.text;
+        final dni = _dniController.text;
 
         if (nombre.isEmpty || dni.isEmpty) {
             //Mostramos un SnackBar o dialogo de error
             ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(Content: Text('Nombre y DNI son obligatorios')),
+                const SnackBar(content: Text('Nombre y DNI son obligatorios'),
+                backgroundColor: Colors.red
+                ),
             );
             return;
         }
@@ -87,10 +98,10 @@ class _AgregarSocioScreenState estend State<AgregarSocioScreen> {
         final nuevoSocio = Socio(
             nombreCompleto: nombre,
             dni: dni,
-            telefono: _telefonoController.text,
+            telefono: _telefonoController.text.trim(),
             fechaInicio: DateTime.now(),
             fechaVencimiento: DateTime.now().add(const Duration(days: 30)),
-            ptecioMensual: double.tryParse(_ptecioController.text)?? 0.0,
+            precioMensual: double.tryParse(_precioController.text)?? 0.0,
             tipoPlan: 'Mensual', // <-- de momento lo dejamos fijo --
         );
 
@@ -99,6 +110,16 @@ class _AgregarSocioScreenState estend State<AgregarSocioScreen> {
 
         // y volvemos a la pantalla anterior
         Navigator.pop(context);
+
+        @override
+        void dispose() {
+            // Limpiamos los controladores cuando se cierre la pantalla
+            _nombreController.dispose();
+            _dniController.dispose();
+            _telefonoController.dispose();
+            _precioController.dispose();
+            super.dispose();
+        }
     }
 
 }

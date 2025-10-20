@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gym/blocs/socios_bloc.dart';
+import 'package:gym/pages/agregar_socio_screen.dart';
 import 'package:gym/repositories/database_helper.dart';
 import 'package:gym/models/socio.dart';
-import 'package:gym/blocs/socios_bloc.dart';
 
 
 class ListaSociosScreen extends StatefulWidget {
@@ -87,32 +88,21 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
     );
   }
   void _agregarSocio(BuildContext context) {
+    // obtenemos el Bloc antes sino da error
+    final sociosBloc = context.read<SociosBloc>();
+
+
     // Navegamos a la pantalla de agregar socio
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => BlocProvider.value(
-          value: context.read<SociosBloc>(), // Pasamos el BloC al formulario
-          child: const AgregarSocioScreen(),
+          // Pasamos el BloC al formulario
+          value: sociosBloc,
+          child: AgregarSocioScreen(),
         ),
       ),
     );
-
-    final dniUnico = DateTime.now().millisecondsSinceEpoch.toString();
-
-    // Ejemplo de como agregar un socio de prueba
-    final nuevoSocio = Socio(
-      nombreCompleto: "Nuevo Socio",
-      dni: dniUnico,
-      telefono: "123456789",
-      fechaInicio: DateTime.now(),
-      fechaVencimiento: DateTime.now().add(const Duration(days: 30)),
-      precioMensual: 5000.0,
-      tipoPlan: "Mensual",
-    );
-
-    // Disparar evento para agregar socio
-    context.read<SociosBloc>().add(AgregarSocioEvent(nuevoSocio));
   }
 
   // Metodo para convertir el estado en color
