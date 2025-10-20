@@ -1,0 +1,16 @@
+{
+  "devcontainer": {
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "flutter-dev",
+    "workspaceFolder": "/app",
+    "forwardPorts": [39421],
+    "extensions": [
+      "dart-code.flutter",
+      "dart-code.dart-code"
+    ],
+    "settings": {
+      "dart.flutterSdkPath": "/flutter/bin"
+    },
+    "postCreateCommand": "flutter pub get"
+  }
+}

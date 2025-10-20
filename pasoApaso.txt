@@ -1,0 +1,63 @@
+Paso 1: Instalar WSL2 en Windows
+    # Habilitar WSL
+    dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+
+    # Habilitar Virtual Machine Platform
+    dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+
+    # Reiniciar la PC (OBLIGATORIO)
+
+Paso 2: Instalar Ubuntu en WSL2
+    # Establecer WSL2 como versión por defecto
+    wsl --set-default-version 2
+
+    # Instalar Ubuntu
+    wsl --install -d Ubuntu
+
+Paso 3: Configurar Ubuntu
+    # Crear usuario y contraseña (sigue las instrucciones)
+    # Actualizar sistema
+    sudo apt update && sudo apt upgrade -y
+
+Paso 4: Instalar Docker Engine en Ubuntu
+    # 1. Instalar dependencias
+    sudo apt update
+    sudo apt install -y curl gnupg lsb-release
+
+    # 2. Agregar repositorio oficial de Docker
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+    # 3. Agregar repo al sistema
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    # 4. Instalar Docker Engine
+    sudo apt update
+    sudo apt install -y docker-ce docker-ce-cli containerd.io
+
+    # 5. Iniciar servicio Docker
+    sudo systemctl enable docker
+    sudo systemctl start docker
+
+    # 6. Agregar tu usuario al grupo docker
+    sudo usermod -aG docker $USER
+
+    # 7. Cerrar sesión y volver a entrar
+    exit
+
+Paso 5: Verificar instalación
+    # Verificar Docker
+    docker --version
+
+    # Verificar que funciona sin sudo
+    docker run hello-world
+
+Paso 6: Instalar Docker Compose
+    # Descargar e instalar Docker Compose
+    sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+    # Dar permisos de ejecución
+    sudo chmod +x /usr/local/bin/docker-compose
+
+    # Verificar
+    docker-compose --version
+

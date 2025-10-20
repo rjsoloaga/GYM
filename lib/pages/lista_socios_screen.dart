@@ -87,8 +87,16 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
     );
   }
   void _agregarSocio(BuildContext context) {
-    // Aqui luego navegaremos a la pantalla de agregar socio
-    print('Agregar nuevo socio');
+    // Navegamos a la pantalla de agregar socio
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BlocProvider.value(
+          value: context.read<SociosBloc>(), // Pasamos el BloC al formulario
+          child: const AgregarSocioScreen(),
+        ),
+      ),
+    );
 
     final dniUnico = DateTime.now().millisecondsSinceEpoch.toString();
 
