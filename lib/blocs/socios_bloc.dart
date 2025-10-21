@@ -52,11 +52,13 @@ class SociosBloc extends Bloc<SocioEvent, SociosState> {
     ActualizarSocioEvent event,
     Emitter<SociosState> emit,
   ) async {
+    print('Bloc: Actualizando socio ID: ${event.socio.id}');
     try {
-      await databaseHelper.updateSocio(event.socio);
+      final resultado = await databaseHelper.updateSocio(event.socio);
       // Recargar la lista despues de actualizar
       add(CargarSociosEvent());
     } catch (e) {
+      print('Bloc: Error en update: $e');
       emit(SociosErrorState('Error al actualizar socio: $e'));
     }
   }

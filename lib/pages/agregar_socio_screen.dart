@@ -3,123 +3,165 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym/blocs/socios_bloc.dart';
 import 'package:gym/models/socio.dart';
 
-
 class AgregarSocioScreen extends StatefulWidget {
-    const AgregarSocioScreen({super.key});
+  final Socio? socioParaEditar;
 
-    @override
-    State<AgregarSocioScreen> createState() => _AgregarSocioScreenState();
+  const AgregarSocioScreen({super.key, this.socioParaEditar});
+
+  @override
+  State<AgregarSocioScreen> createState() => _AgregarSocioScreenState();
 }
 
 class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
-    //Controladores para los campos de texto
-    final _nombreController = TextEditingController();
-    final _dniController = TextEditingController();
-    final _telefonoController = TextEditingController();
-    final _precioController = TextEditingController();
+  //Controladores para los campos de texto
+  final _nombreController = TextEditingController();
+  final _dniController = TextEditingController();
+  final _telefonoController = TextEditingController();
+  final _precioController = TextEditingController();
 
-    @override
-    Widget build(BuildContext context) {
-        return Scaffold(
-            appBar: AppBar(
-                title: const Text('Agregar Socio'),
-                backgroundColor: Colors.blue,
-            ),
-            body: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                    children:[
-                        TextField(
-                            controller: _nombreController,
-                            decoration: const InputDecoration(
-                                labelText: 'Nombre Completo *',
-                                border: OutlineInputBorder(),
-                            ),
-                        ),
+  @override
+  void initState() {
+    super.initState();
+    // Si vamos a editar primero cargamos los datos existentes
+    if (widget.socioParaEditar != null) {
+      _cargarDatosExistente();
+    }
+  }
 
-                        TextField(
-                            controller: _dniController,
-                            decoration: const InputDecoration(
-                                labelText: 'DNI *',
-                                border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
-                        ),
+  void _cargarDatosExistente() {
+    final socio = widget.socioParaEditar!;
+    _nombreController.text = socio.nombreCompleto;
+    _dniController.text = socio.dni;
+    _telefonoController.text = socio.telefono;
+    _precioController.text = socio.precioMensual.toString();
+  }
 
-                        const SizedBox(height: 16),
-                        TextField(
-                            controller: _telefonoController,
-                            decoration: const InputDecoration(
-                                labelText: 'Teléfono',
-                                border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.phone,
-                        ),
+  void _guardarSocio() {
+    final nombre = _nombreController.text;
+    final dni = _dniController.text;
 
-                        const SizedBox(height: 16),
-                        TextField(
-                            controller: _precioController,
-                            decoration: const InputDecoration(
-                                labelText: 'Precio Mensual',
-                                border: OutlineInputBorder(),
-                            ),
-                            keyboardType: TextInputType.number,
-                        ),
-
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                            onPressed: _guardarSocio,
-                            style: ElevatedButton.styleFrom(
-                                minimumSize: const Size(double.infinity, 50),
-                            ),
-                            child: const Text('Guardar Socio'),
-                        ),
-                    ],
-                ),
-            ),
-        );
+    if (nombre.isEmpty || dni.isEmpty) {
+      //Mostramos un SnackBar o dialogo de error
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nombre y DNI son obligatorios'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
     }
 
-    void _guardarSocio() {
-        final nombre = _nombreController.text;
-        final dni = _dniController.text;
+    // Crear el socio con los datos del usuario
+    final socio = Socio(
+      id: widget.socioParaEditar?.id, // Si es para editar mantenemos el ID
+      nombreCompleto: nombre,
+      dni: dni,
+      telefono: _telefonoController.text.trim(),
+      fechaInicio: widget.socioParaEditar?.fechaInicio ?? DateTime.now(), // Mantenemos la fecha original
+      fechaVencimiento: widget.socioParaEditar?.fechaVencimiento ?? DateTime.now().add(const Duration(days: 30)),
+      precioMensual: double.tryParse(_precioController.text) ?? 0.0,
+      tipoPlan: "Mensual", // <-- de momento lo dejamos fijo --
+    );
 
-        if (nombre.isEmpty || dni.isEmpty) {
-            //Mostramos un SnackBar o dialogo de error
-            ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Nombre y DNI son obligatorios'),
-                backgroundColor: Colors.red
-                ),
-            );
-            return;
-        }
+    print('debug: socio final a guardar - ID: ${socio.id}');
 
-        //Crear el socio con los datos del usuario
-        final nuevoSocio = Socio(
-            nombreCompleto: nombre,
-            dni: dni,
-            telefono: _telefonoController.text.trim(),
-            fechaInicio: DateTime.now(),
-            fechaVencimiento: DateTime.now().add(const Duration(days: 30)),
-            precioMensual: double.tryParse(_precioController.text)?? 0.0,
-            tipoPlan: 'Mensual', // <-- de momento lo dejamos fijo --
-        );
-
-        // Guardamos en DB usando el BloC
-        context.read<SociosBloc>().add(AgregarSocioEvent(nuevoSocio));
-
-        // y volvemos a la pantalla anterior
-        Navigator.pop(context);
-
-        @override
-        void dispose() {
-            // Limpiamos los controladores cuando se cierre la pantalla
-            _nombreController.dispose();
-            _dniController.dispose();
-            _telefonoController.dispose();
-            _precioController.dispose();
-            super.dispose();
-        }
+    // Condicional para saber si es agregar(Create) o editar(Update)
+    if (widget.socioParaEditar == null) {
+      // Si esta vacio creamos nuevo socio
+      context.read<SociosBloc>().add(AgregarSocioEvent(socio));
+      print('Creando nuevo socio');
+      
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Socio agregado correctamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      // Si no, actualizamos el existente
+      context.read<SociosBloc>().add(ActualizarSocioEvent(socio));
+      print('Actualizando socio ID: ${socio.id}');
+      
+      // Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Socio actualizado correctamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
 
+    Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    // Limpiamos los controladores cuando se cierre la pantalla
+    _nombreController.dispose();
+    _dniController.dispose();
+    _telefonoController.dispose();
+    _precioController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.socioParaEditar == null ? 'Agregar Nuevo Socio' : 'Editar Socio'),
+        backgroundColor: Colors.blue,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _nombreController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre Completo *',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _dniController,
+              decoration: InputDecoration(
+                labelText: 'DNI *',
+                border: const OutlineInputBorder(),
+                enabled: widget.socioParaEditar == null, // DNI solo editable en nuevo socio
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _telefonoController,
+              decoration: const InputDecoration(
+                labelText: 'Teléfono',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _precioController,
+              decoration: const InputDecoration(
+                labelText: 'Precio Mensual',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _guardarSocio,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: const Text('Guardar Socio'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

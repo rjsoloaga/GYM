@@ -74,6 +74,7 @@ class DatabaseHelper {
 
     //UPDATE - actualizar un socio existente
     Future<int> updateSocio(Socio socio) async {
+        print(' DB: Actualizando Socio ID: ${socio.id}');
         Database db = await instance.database;
         // Actualizamos la fila donde el ID coincida
         return await db.update(

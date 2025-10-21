@@ -5,107 +5,132 @@ import 'package:gym/pages/agregar_socio_screen.dart';
 import 'package:gym/repositories/database_helper.dart';
 import 'package:gym/models/socio.dart';
 
-
 class ListaSociosScreen extends StatefulWidget {
   const ListaSociosScreen({super.key});
 
   @override
   State<ListaSociosScreen> createState() => _ListaSociosScreenState();
 }
+
 class _ListaSociosScreenState extends State<ListaSociosScreen> {
+  void _editarSocio(BuildContext context, Socio socio) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AgregarSocioScreen(socioParaEditar: socio),
+      ),
+    );
+  }
+
+  void _eliminarSocio(BuildContext context, Socio socio) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar Socio'),
+        content: Text('¿Estás seguro de eliminar a ${socio.nombreCompleto}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Eliminar el socio
+              context.read<SociosBloc>().add(EliminarSocioEvent(socio.id!));
+              Navigator.pop(context);
+              
+              // Mostrar confirmación
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('${socio.nombreCompleto} eliminado correctamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _agregarSocio(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AgregarSocioScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Proveemos el BLoC a toda la pantalla
-    return BlocProvider(
-      create: (context) =>
-          SociosBloc(DatabaseHelper.instance)..add(CargarSociosEvent()),
-      child: Builder(builder: (context) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Gestion de Socios'),
-            backgroundColor:
-                Colors.blue, // Este es el color de la barra superior
-          ),
-          body: _buildBody(),
-          floatingActionButton: _buildFloatingActionButton(context),
-        );
-      }),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Gestión de Socios'),
+        backgroundColor: Colors.blue,
+      ),
+      body: _buildBody(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _agregarSocio(context),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
   Widget _buildBody() {
     return BlocBuilder<SociosBloc, SociosState>(
       builder: (context, state) {
-        // Diferentes widgets segun el estado
         if (state is SociosCargandoState) {
           return const Center(child: CircularProgressIndicator());
         } else if (state is SociosErrorState) {
-          return Center(child: Text('Error: ${state.error} '));
+          return Center(child: Text('Error: ${state.error}'));
         } else if (state is SociosCargadosState) {
           return _buildListaSocios(state.socios);
         } else {
-          return const Center(child: Text('Presiona el boton para cargar socios'));
+          return const Center(child: Text('No hay socios cargados'));
         }
       },
     );
   }
 
   Widget _buildListaSocios(List<Socio> socios) {
+    if (socios.isEmpty) {
+      return const Center(child: Text('No hay socios registrados'));
+    }
+    
     return ListView.builder(
       itemCount: socios.length,
       itemBuilder: (context, index) {
-          final socio = socios[index];
-          return Card(
-            margin: const EdgeInsets.all(8.0),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: _getColorByEstado(socio.estadoCuota),
-                child: Text(socio.nombreCompleto[0]), // Primer letra del nombre
-              ),
-              title: Text(socio.nombreCompleto),
-              subtitle: Text('DNI: ${socio.dni} - Vence: ${_formatDate(socio.fechaVencimiento)}'),
-              trailing: Text(
-                socio.estadoCuota,
-                style: TextStyle(
-                  color: _getColorByEstado(socio.estadoCuota),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              onTap: () {
-                // Aqui luego navegaremos a la pantalla de edicion
-                print('Editar socio: ${socio.nombreCompleto}');
-              },
+        final socio = socios[index];
+        return Card(
+          margin: const EdgeInsets.all(8.0),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: _getColorByEstado(socio.estadoCuota),
+              child: Text(socio.nombreCompleto[0]),
             ),
-          );
+            title: Text(socio.nombreCompleto),
+            subtitle: Text('DNI: ${socio.dni} - Vence: ${_formatDate(socio.fechaVencimiento)}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () => _editarSocio(context, socio),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _eliminarSocio(context, socio),
+                ),
+              ],
+            ),
+          ),
+        );
       },
     );
   }
 
-  Widget _buildFloatingActionButton(BuildContext context) {
-    return FloatingActionButton(
-      onPressed: () => _agregarSocio(context),
-      child: const Icon(Icons.add),
-    );
-  }
-  void _agregarSocio(BuildContext context) {
-    // obtenemos el Bloc antes sino da error
-    final sociosBloc = context.read<SociosBloc>();
-
-
-    // Navegamos a la pantalla de agregar socio
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BlocProvider.value(
-          // Pasamos el BloC al formulario
-          value: sociosBloc,
-          child: AgregarSocioScreen(),
-        ),
-      ),
-    );
-  }
-
-  // Metodo para convertir el estado en color
   Color _getColorByEstado(String estado) {
     switch (estado) {
       case 'Verde':
@@ -119,11 +144,7 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
     }
   }
 
-  // Metodo para formatear la fecha
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
-
-
-
 }
