@@ -13,6 +13,9 @@ class ListaSociosScreen extends StatefulWidget {
 }
 
 class _ListaSociosScreenState extends State<ListaSociosScreen> {
+
+  final _searchController = TextEditingController();
+
   void _editarSocio(BuildContext context, Socio socio) {
     Navigator.push(
       context,
@@ -64,19 +67,31 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gestión de Socios'),
-        backgroundColor: Colors.blue,
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Buscar socio por nombre, DNI o teléfono...',
+          border: InputBorder.none,
+          hintStyle: TextStyle(color: Colors.white70),
+        ),
+        style: TextStyle(color: Colors.white),
+        onChanged: (texto) {
+          // Disparar evento de búsqueda al BLoC
+          context.read<SociosBloc>().add(BuscarSociosEvent(texto));
+        },
       ),
-      body: _buildBody(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _agregarSocio(context),
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
+      backgroundColor: Colors.blue,
+    ),
+    body: _buildBody(),
+    floatingActionButton: FloatingActionButton(
+      onPressed: () => _agregarSocio(context),
+      child: const Icon(Icons.add),
+    ),
+  );
+}
 
   Widget _buildBody() {
     return BlocBuilder<SociosBloc, SociosState>(
@@ -86,7 +101,7 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
         } else if (state is SociosErrorState) {
           return Center(child: Text('Error: ${state.error}'));
         } else if (state is SociosCargadosState) {
-          return _buildListaSocios(state.socios);
+          return _buildListaSocios(state.sociosFiltrados);
         } else {
           return const Center(child: Text('No hay socios cargados'));
         }

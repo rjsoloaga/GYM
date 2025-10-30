@@ -18,3 +18,8 @@ class EliminarSocioEvent extends SocioEvent {
   final int id;
   EliminarSocioEvent(this.id);
 }
+
+class BuscarSociosEvent extends SocioEvent {
+  final String texto;
+  BuscarSociosEvent(this.texto);
+}

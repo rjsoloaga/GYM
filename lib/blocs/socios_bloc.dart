@@ -16,6 +16,7 @@ class SociosBloc extends Bloc<SocioEvent, SociosState> {
     on<AgregarSocioEvent>(_onAgregarSocio);
     on<ActualizarSocioEvent>(_onActualizarSocio);
     on<EliminarSocioEvent>(_onEliminarSocio);
+    on<BuscarSociosEvent>(_onBuscarSocios);
   }
 
   // Funcion para carga de socios
@@ -76,7 +77,44 @@ class SociosBloc extends Bloc<SocioEvent, SociosState> {
       emit(SociosErrorState('Error al eliminar socio: $e'));
     }
   }
+
+  // Función helper para filtrar
+  List<Socio> _filtrarSocios(List<Socio> socios, String texto) {
+    if (texto.isEmpty) {
+      return socios; // Si no hay texto, mostrar todos
+    }
+    
+    final textoLower = texto.toLowerCase();
+    
+    return socios.where((socio) {
+      return socio.nombreCompleto.toLowerCase().contains(textoLower) ||
+            socio.dni.contains(texto) || // DNI exacto (sin lower)
+            socio.telefono.contains(texto); // Teléfono exacto
+    }).toList();
+  }
   
+  Future<void> _onBuscarSocios(
+    BuscarSociosEvent event,
+    Emitter<SociosState> emit,
+  ) async {
+    // Solo podemos buscar si ya tenemos socios cargados
+    if (state is SociosCargadosState) {
+      final estadoActual = state as SociosCargadosState;
+      
+      // Aplicar el filtro usando nuestra función helper
+      final sociosFiltrados = _filtrarSocios(
+        estadoActual.todosLosSocios,
+        event.texto
+      );
+      
+      // Emitir nuevo estado con los resultados filtrados
+      emit(SociosCargadosState(
+        todosLosSocios: estadoActual.todosLosSocios,
+        sociosFiltrados: sociosFiltrados,
+        textoBusqueda: event.texto,
+      ));
+    }
+  }
 
   
 }
