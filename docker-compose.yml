@@ -2,11 +2,9 @@ services:
   flutter-dev:
     build: .
     volumes:
-      - .:/app
+      - ./:/app 
     ports:
       - "39421:39421"
     stdin_open: true
     tty: true
-    command: >
-      sh -c "flutter pub get && 
-             flutter run -d web-server --web-port 39421 --web-hostname 0.0.0.0"
+    command: flutter run -d web-server --web-port 39421 --web-hostname 0.0.0.0

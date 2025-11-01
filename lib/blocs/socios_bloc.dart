@@ -28,7 +28,11 @@ class SociosBloc extends Bloc<SocioEvent, SociosState> {
 
     try {
       final socios = await databaseHelper.getSocios();
-      emit(SociosCargadosState(socios)); //Emitir esado con datos
+      emit(SociosCargadosState(
+        todosLosSocios: socios,
+        sociosFiltrados: socios,
+        textoBusqueda: '',
+      )); //Emitir esado con datos
     } catch (e) {
       emit(SociosErrorState('Error al cargar socios: $e'));
     }
