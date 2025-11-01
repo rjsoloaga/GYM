@@ -1,6 +1,6 @@
 import 'package:sqflite/sqflite.dart'; // PAra la DB
 import 'package:path/path.dart'; // Para unir rutas de directorios
-import 'package:gym/models/socio.dart';
+import 'package:gym/features/socios/models/socio.dart';
 
 
 class DatabaseHelper {

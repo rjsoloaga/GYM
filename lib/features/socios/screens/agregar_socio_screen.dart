@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gym/blocs/socios_bloc.dart';
-import 'package:gym/models/socio.dart';
+import 'package:gym/features/socios/bloc/socios_bloc.dart';
+import 'package:gym/features/socios/models/socio.dart';
 
 class AgregarSocioScreen extends StatefulWidget {
   final Socio? socioParaEditar;
@@ -129,7 +129,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
               decoration: InputDecoration(
                 labelText: 'DNI *',
                 border: const OutlineInputBorder(),
-                enabled: widget.socioParaEditar == null, // DNI solo editable en nuevo socio
+                enabled: true,
               ),
               keyboardType: TextInputType.number,
             ),

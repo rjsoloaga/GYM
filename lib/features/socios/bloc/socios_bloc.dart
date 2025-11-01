@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gym/repositories/database_helper.dart';
-import 'package:gym/models/socio.dart';
+import 'package:gym/core/database/database_helper.dart';
+import 'package:gym/features/socios/models/socio.dart';
 
 
 part 'socios_event.dart';

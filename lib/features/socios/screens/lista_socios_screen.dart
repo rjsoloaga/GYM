@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gym/blocs/socios_bloc.dart';
-import 'package:gym/pages/agregar_socio_screen.dart';
-import 'package:gym/models/socio.dart';
+import 'package:gym/features/socios/bloc/socios_bloc.dart';
+import 'package:gym/features/socios/screens/agregar_socio_screen.dart';
+import 'package:gym/features/socios/models/socio.dart';
 
 class ListaSociosScreen extends StatefulWidget {
   const ListaSociosScreen({super.key});
