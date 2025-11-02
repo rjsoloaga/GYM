@@ -1,0 +1,207 @@
+# 🏋️ GYM App - Guía Completa de Trabajo en Equipo
+
+## 🤔 ¿POR QUÉ ESTE CAMBIO?
+Problemas anteriores: Todos trabajábamos en la misma rama main, si alguien subía código roto afectaba a todos, no había control.
+Solución: main protegido (código estable), develop para integración, ramas feature para trabajo individual.
+
+## 🗂 ESTRUCTURA DE RAMAS
+main ← CÓDIGO ESTABLE (protegido)
+  ↑
+develop ← INTEGRACIÓN 
+  ↑
+feature/login ← Compañero 1: Autenticación
+feature/dashboard ← Compañero 2: Estadísticas
+
+## 🚀 CÓMO TRABAJAR - COMANDOS
+
+### ACTUALIZAR REPOSITORIO:
+cd GYM
+git checkout develop
+git pull origin develop
+
+### CREAR TU RAMA:
+git checkout -b feature/login        # Compañero 1
+git checkout -b feature/dashboard    # Compañero 2
+
+### TRABAJAR Y SUBIR CAMBIOS:
+git add .
+git commit -m "feat: descripción"
+git push origin feature/tu-rama
+
+### CREAR PULL REQUEST:
+1. Ir a: https://github.com/rjsoloaga/GYM
+2. Click "Pull requests" → "New pull request"
+3. base: develop ← compare: feature/tu-rama
+4. Crear PR y esperar aprobación
+
+## 🗂 ESTRUCTURA DE CARPETAS
+lib/features/
+├── socios/          # CRUD EXISTENTE (NO MODIFICAR)
+├── auth/            # Para login/registro (Compañero 1)
+└── dashboard/       # Para estadísticas (Compañero 2)
+
+## 🛠 COMANDOS DOCKER
+docker compose up
+docker compose exec flutter-dev flutter pub get
+docker compose exec flutter-dev flutter analyze
+
+## 📋 FLUJO DIARIO COMPLETO
+
+### AL EMPEZAR EL DÍA:
+git checkout develop
+git pull origin develop
+git checkout feature/tu-rama
+
+### DURANTE EL DÍA:
+git add .
+git commit -m "feat: avance en funcionalidad"
+git push origin feature/tu-rama
+
+### AL TERMINAR EL DÍA:
+git checkout develop
+git pull origin develop
+git checkout feature/tu-rama
+git merge develop 
+
+## 🚨 REGLAS IMPORTANTES
+- Trabajar SOLO en tu carpeta asignada
+- Hacer PRs a DEVELOP (nunca a MAIN)
+- Commit frecuentes con mensajes claros
+- Probar que compila: flutter analyze
+- Esperar aprobación antes de merge
+
+## ❓ PREGUNTAS FRECUENTES
+¿Por qué no push directo a main? → Para proteger código estable
+¿Qué pasa si PR no aprobado? → Recibes comentarios para mejorar
+¿Frecuencia de commits? → 1-2 por día con mensajes claros
+
+
+## ESTRUCTURA CARPETA lib/ - EN ESTA TRABAJAREMOS, CADA CUAL EN LA CARPETA QUE LE CORRESPONDA
+
+lib/
+├── main.dart
+├── app.dart
+├── features/           # 👈 MÓDULOS POR FUNCIONALIDAD - FDD gente, FDD!
+│   ├── socios/         # TU CRUD ACTUAL (TÚ)
+│   │   ├── bloc/       # socios_bloc, events, states
+│   │   ├── screens/    # lista, agregar, editar
+│   │   ├── widgets/    # socio_card, socio_form
+│   │   └── models/     # socio_model
+│   ├── auth/           # COMPAÑERO 1 (login/registro)
+│   │   ├── screens/    # login_screen, register_screen
+│   │   ├── bloc/       # auth_bloc
+│   │   └── models/     # user_model
+│   ├── dashboard/      # COMPAÑERO 2 (estadísticas)
+│   │   ├── screens/    # dashboard_screen
+│   │   ├── widgets/    # stat_card, chart_widget
+│   │   └── bloc/       # dashboard_bloc
+│   └── payments/       # MÓDULO NUEVO (pagos/notificaciones)
+│       ├── screens/    # payment_screen
+│       ├── bloc/       # payments_bloc
+│       └── services/   # email_service, telegram_service
+├── core/               # RECURSOS COMPARTIDOS
+│   ├── theme/          # app_theme.dart, colors.dart
+│   ├── constants/      # app_constants.dart, routes.dart
+│   ├── database/       # database_helper.dart
+│   └── services/       # notification_service.dart
+└── shared/             # WIDGETS REUTILIZABLES
+    ├── widgets/        # custom_appbar, loading_indicator
+    └── utils/          # validators.dart, formatters.dart
+
+
+## BACKLOG A VER SI TERMINAMOS PARA EL 13 DE NOMVIEMBRE
+
+🎯 SPRINT 1 (4-5 Nov) - BASE MEJORADA
+TAREA 1.1: Ampliar Modelo Socio ⏳ 2 horas
+Agregar campo email
+
+Agregar campo estadoAutomatico (calculado)
+
+Actualizar toMap()/fromMap()
+
+TAREA 1.2: Estado Automático de Cuotas ⏳ 4 horas
+Función que calcule: MOROSO, POR VENCER, AL DÍA
+
+Integrar en lista y detalles
+
+Colores automáticos en UI
+
+TAREA 1.3: Panel de Dashboard ⏳ 6 horas
+Tarjetas: Total Socios, Ingresos Mes, Próximos a Vencer
+
+Gráfico simple de barras
+
+Sección arriba de la lista
+
+✅ ENTREGABLE SPRINT 1: App con estados automáticos + dashboard
+
+🎯 SPRINT 2 (6-7 Nov) - NOTIFICACIONES
+TAREA 2.1: Integración SendGrid ⏳ 8 horas
+Crear cuenta SendGrid (gratis)
+
+Configurar API Key
+
+Servicio de envío de emails
+
+Template de recordatorio de pago
+
+TAREA 2.2: Bot de Telegram ⏳ 4 horas
+Crear bot con @BotFather
+
+Servicio de notificaciones al dueño
+
+Alertas: "Socio X está por vencer"
+
+TAREA 2.3: UI Notificaciones ⏳ 4 horas
+Botones "Enviar Recordatorio" por socio
+
+Envío masivo a morosos
+
+Estados de envío (éxito/error)
+
+✅ ENTREGABLE SPRINT 2: Sistema de notificaciones funcionando
+
+🎯 SPRINT 3 (8-10 Nov) - PAGOS
+TAREA 3.1: Mercado Pago Sandbox ⏳ 10 horas
+Crear cuenta developer
+
+Integrar SDK Flutter
+
+Generar links de pago de prueba
+
+Manejar respuestas de pago
+
+TAREA 3.2: Flujo de Cobro ⏳ 6 horas
+Botón "Cobrar Cuota" por socio
+
+Generar preferencia de pago
+
+Abrir link en navegador
+
+Actualizar estado tras pago
+
+✅ ENTREGABLE SPRINT 3: Sistema de pagos demo funcionando
+
+🎯 SPRINT 4 (11-12 Nov) - PULIR Y DEPURAR
+TAREA 4.1: Validaciones y UX ⏳ 6 horas
+Validar email en formulario
+
+Loading states en botones
+
+Mensajes de confirmación
+
+Manejo de errores
+
+TAREA 4.2: Demo y Presentación ⏳ 4 horas
+Preparar datos de prueba
+
+Script de demostración
+
+Documentar funcionalidades
+
+✅ ENTREGABLE FINAL: App completa lista para exposición
+
+
+
+
+## ¡Entre todos hacemos un mejor proyecto! 🚀
