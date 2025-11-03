@@ -17,6 +17,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
   final _nombreController = TextEditingController();
   final _dniController = TextEditingController();
   final _telefonoController = TextEditingController();
+  final _emailController = TextEditingController();
   final _precioController = TextEditingController();
 
   @override
@@ -33,6 +34,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     _nombreController.text = socio.nombreCompleto;
     _dniController.text = socio.dni;
     _telefonoController.text = socio.telefono;
+    _emailController.text = socio.email;
     _precioController.text = socio.precioMensual.toString();
   }
 
@@ -57,6 +59,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
       nombreCompleto: nombre,
       dni: dni,
       telefono: _telefonoController.text.trim(),
+      email: _emailController.text.trim(),
       fechaInicio: widget.socioParaEditar?.fechaInicio ?? DateTime.now(), // Mantenemos la fecha original
       fechaVencimiento: widget.socioParaEditar?.fechaVencimiento ?? DateTime.now().add(const Duration(days: 30)),
       precioMensual: double.tryParse(_precioController.text) ?? 0.0,
@@ -101,6 +104,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     _nombreController.dispose();
     _dniController.dispose();
     _telefonoController.dispose();
+    _emailController.dispose();
     _precioController.dispose();
     super.dispose();
   }
@@ -141,6 +145,15 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.phone,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 16),
             TextField(

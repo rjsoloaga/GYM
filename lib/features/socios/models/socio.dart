@@ -5,6 +5,7 @@ class Socio {
     final String nombreCompleto;
     final String dni;
     final String telefono;
+    final String email;
     final DateTime fechaInicio;
     final DateTime fechaVencimiento;
     final double precioMensual;
@@ -16,6 +17,7 @@ class Socio {
         required this.nombreCompleto,
         required this.dni,
         required this.telefono,
+        required this.email,
         required this.fechaInicio,
         required this.fechaVencimiento,
         required this.precioMensual,
@@ -54,6 +56,7 @@ class Socio {
             nombreCompleto: nombreCompleto ?? this.nombreCompleto,
             dni: dni ?? this.dni,
             telefono: telefono ?? this.telefono,
+            email: email ?? this.email,
             fechaInicio: fechaInicio ?? this.fechaInicio,
             fechaVencimiento: fechaVencimiento ?? this.fechaVencimiento,
             precioMensual: precioMensual ?? this.precioMensual,
@@ -68,6 +71,7 @@ class Socio {
       'nombreCompleto': nombreCompleto,
       'dni': dni,
       'telefono': telefono,
+      'email': email,
       'fechaInicio': fechaInicio.toIso8601String(),
       'fechaVencimiento': fechaVencimiento.toIso8601String(),
       'precioMensual': precioMensual,
@@ -87,6 +91,7 @@ class Socio {
             nombreCompleto: map['nombreCompleto'],
             dni: map['dni'],
             telefono: map['telefono'],
+            email: map['email'],
             fechaInicio: DateTime.parse(map['fechaInicio']),//Convertimos el String de la BD de vuelta a DateTime
             fechaVencimiento: DateTime.parse(map['fechaVencimiento']),
             precioMensual: map['precioMensual'],
