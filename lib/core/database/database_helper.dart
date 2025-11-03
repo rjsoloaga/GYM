@@ -1,6 +1,8 @@
 import 'package:sqflite/sqflite.dart'; // PAra la DB
 import 'package:path/path.dart'; // Para unir rutas de directorios
 import 'package:gym/features/socios/models/socio.dart';
+import 'package:flutter/foundation.dart';
+
 
 
 class DatabaseHelper {
@@ -28,8 +30,14 @@ class DatabaseHelper {
         //Abre o crea la base de datos en la ruta especificada
         return await openDatabase(
             path,
-            version: 1, //version de la db(util para futuras actualizaciones)
+            version: 2, //version de la db(util para futuras actualizaciones)
             onCreate: _createTable, //Funcion que ejecuta al crear la db por primera vez
+            onUpgrade: (db, oldVersion, newVersion) async {
+              if (oldVersion < 2) {
+                // Agregar la columna 'email' para instalaciones anteriores
+                await db.execute("ALTER TABLE socio ADD COLUMN email TEXT DEFAULT ''");
+              }
+            },
         );
     }
 
@@ -42,6 +50,7 @@ class DatabaseHelper {
                 nombreCompleto TEXT NOT NULL,          -- NOT NULL significa que es obligatorio
                 dni TEXT NOT NULL UNIQUE,              -- UNIQUE asegura que no haya dos DNIs iguales
                 telefono TEXT NOT NULL,
+                email TEXT NOT NULL,
                 fechaInicio TEXT NOT NULL,             -- Las fechas se guardan como TEXT en formato ISO
                 fechaVencimiento TEXT NOT NULL,
                 precioMensual REAL NOT NULL,           -- REAL es para números con decimales
@@ -74,7 +83,7 @@ class DatabaseHelper {
 
     //UPDATE - actualizar un socio existente
     Future<int> updateSocio(Socio socio) async {
-        print(' DB: Actualizando Socio ID: ${socio.id}');
+        debugPrint(' DB: Actualizando Socio ID: ${socio.id}');
         Database db = await instance.database;
         // Actualizamos la fila donde el ID coincida
         return await db.update(

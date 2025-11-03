@@ -46,6 +46,7 @@ class Socio {
         String? nombreCompleto,
         String? dni,
         String? telefono,
+        String? email,
         DateTime? fechaInicio,
         DateTime? fechaVencimiento,
         double? precioMensual,
@@ -88,14 +89,14 @@ class Socio {
     factory Socio.fromMap(Map<String, dynamic> map) {
         return Socio(
             id: map['id'],
-            nombreCompleto: map['nombreCompleto'],
-            dni: map['dni'],
-            telefono: map['telefono'],
-            email: map['email'],
-            fechaInicio: DateTime.parse(map['fechaInicio']),//Convertimos el String de la BD de vuelta a DateTime
-            fechaVencimiento: DateTime.parse(map['fechaVencimiento']),
-            precioMensual: map['precioMensual'],
-            tipoPlan: map['tipoPlan'],
+            nombreCompleto: map['nombreCompleto'] ?? '',
+            dni: map['dni'] ?? '',
+            telefono: map['telefono'] ?? '',
+            email: map['email'] ?? '',
+            fechaInicio: DateTime.parse(map['fechaInicio'] as String),//Convertimos el String de la BD de vuelta a DateTime
+            fechaVencimiento: DateTime.parse(map['fechaVencimiento'] as String),
+            precioMensual: (map['precioMensual'] as num?)?.toDouble() ?? 0.0,
+            tipoPlan: map['tipoPlan'] ?? '',
           );
     }
 

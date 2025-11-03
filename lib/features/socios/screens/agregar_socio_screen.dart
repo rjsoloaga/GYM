@@ -66,13 +66,13 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
       tipoPlan: "Mensual", // <-- de momento lo dejamos fijo --
     );
 
-    print('debug: socio final a guardar - ID: ${socio.id}');
+    debugPrint('debug: socio final a guardar - ID: ${socio.id}');
 
     // Condicional para saber si es agregar(Create) o editar(Update)
     if (widget.socioParaEditar == null) {
       // Si esta vacio creamos nuevo socio
       context.read<SociosBloc>().add(AgregarSocioEvent(socio));
-      print('Creando nuevo socio');
+      debugPrint('Creando nuevo socio');
       
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
@@ -84,7 +84,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     } else {
       // Si no, actualizamos el existente
       context.read<SociosBloc>().add(ActualizarSocioEvent(socio));
-      print('Actualizando socio ID: ${socio.id}');
+      debugPrint('Actualizando socio ID: ${socio.id}');
       
       // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
