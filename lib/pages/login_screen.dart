@@ -70,50 +70,40 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo/Icono
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E1E),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.5),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: const Color(0xFF3A3A3A),
-                          width: 2,
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.fitness_center,
-                        size: 60,
-                        color: Color(0xFF2196F3),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    
-                    // Título
-                    const Text(
-                      'Gym Manager',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Gestiona tus socios fácilmente',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white.withOpacity(0.9),
-                      ),
-                    ),
+                                         // Logo/Icono
+                     Container(
+                       width: 240,
+                       height: 240,
+                       decoration: BoxDecoration(
+                         shape: BoxShape.circle,
+                         border: Border.all(
+                           color: Colors.white.withOpacity(0.15),
+                           width: 3,
+                         ),
+                         boxShadow: [
+                           BoxShadow(
+                             color: Colors.black.withOpacity(0.5),
+                             blurRadius: 25,
+                             offset: const Offset(0, 10),
+                             spreadRadius: 3,
+                           ),
+                         ],
+                       ),
+                       child: ClipOval(
+                         child: ColorFiltered(
+                           colorFilter: const ColorFilter.matrix([
+                             1.25, 0, 0, 0, 20,    // Aumentar brillo y contraste R
+                             0, 1.25, 0, 0, 20,   // Aumentar brillo y contraste G
+                             0, 0, 1.25, 0, 20,   // Aumentar brillo y contraste B
+                             0, 0, 0, 1, 0,       // Alpha sin cambios
+                           ]),
+                           child: Image.asset(
+                             'lobo.png',
+                             fit: BoxFit.cover,
+                           ),
+                         ),
+                       ),
+                     ),
                     const SizedBox(height: 50),
 
                     // Formulario de login

@@ -176,7 +176,24 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.fitness_center, color: Colors.white, size: 28),
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.1),
+                                  width: 1,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(7),
+                                child: Image.asset(
+                                  'lobo.png',
+                                  width: 32,
+                                  height: 32,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
