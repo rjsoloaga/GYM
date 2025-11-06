@@ -9,8 +9,9 @@ class TestDatabase {
     // Test 1: Insertar socio
     final nuevoSocio = Socio(
       nombreCompleto: "Maria Garcia",
-      dni: dniUnico,
+      dni: "12345678",
       telefono: "987654321",
+      correo: "maria.garcia@example.com",
       fechaInicio: DateTime.now(),
       fechaVencimiento: DateTime.now().add(const Duration(days: 30)),
       precioMensual: 5000.0,

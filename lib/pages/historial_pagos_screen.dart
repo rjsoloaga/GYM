@@ -150,14 +150,15 @@ class _HistorialPagosScreenState extends State<HistorialPagosScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
+          final pagosBloc = context.read<PagosBloc>();
           final resultado = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => AgregarPagoScreen(socio: widget.socio),
             ),
           );
-          if (resultado == true) {
-            context.read<PagosBloc>().add(CargarPagosPorSocioEvent(widget.socio.id!));
+          if (resultado == true && mounted) {
+            pagosBloc.add(CargarPagosPorSocioEvent(widget.socio.id!));
           }
         },
         backgroundColor: const Color(0xFF2196F3),
@@ -179,7 +180,7 @@ class _HistorialPagosScreenState extends State<HistorialPagosScreen> {
         border: Border.all(color: const Color(0xFF3A3A3A)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -193,7 +194,7 @@ class _HistorialPagosScreenState extends State<HistorialPagosScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50).withOpacity(0.2),
+                color: const Color(0xFF4CAF50).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(

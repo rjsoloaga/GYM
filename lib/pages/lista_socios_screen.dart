@@ -97,30 +97,6 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
     );
   }
 
-  void _logoutUnused(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Cerrar Sesión'),
-        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<AuthBloc>().add(LogoutEvent());
-              Navigator.pop(context);
-            },
-            child: const Text('Cerrar Sesión'),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _diasRestantes(DateTime fechaVencimiento) {
     final diferencia = fechaVencimiento.difference(DateTime.now()).inDays;
     if (diferencia < 0) {
@@ -166,7 +142,7 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withValues(alpha: 0.3),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -180,7 +156,7 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                   width: 1,
                                 ),
                               ),
@@ -210,7 +186,7 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
                                   Text(
                                     'Hola, ${authState.nombre}',
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
+                                      color: Colors.white.withValues(alpha: 0.9),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -232,7 +208,7 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withValues(alpha: 0.2),
                                 blurRadius: 5,
                               ),
                             ],
@@ -374,7 +350,7 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -394,7 +370,7 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: colorEstado.withOpacity(0.2),
+                    color: colorEstado.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                     border: Border.all(color: colorEstado, width: 2),
                   ),
@@ -466,7 +442,7 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: colorEstado.withOpacity(0.1),
+                          color: colorEstado.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
