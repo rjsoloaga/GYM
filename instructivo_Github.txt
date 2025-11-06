@@ -202,6 +202,15 @@ Documentar funcionalidades
 ✅ ENTREGABLE FINAL: App completa lista para exposición
 
 
+[tipo]: [descripción breve]
+
+Tipos comunes:
+feat:      Nueva funcionalidad
+fix:       Corrección de bug
+docs:      Documentación
+style:     Cambios de formato (sin afectar código)
+refactor:  Reestructuración de código
+test:      Pruebas
 
 
 ## ¡Entre todos hacemos un mejor proyecto! 🚀

@@ -4,6 +4,9 @@ import 'package:gym/features/socios/bloc/socios_bloc.dart';
 import 'package:gym/features/socios/screens/agregar_socio_screen.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import '../widgets/socio_card.dart';
+import 'package:gym/features/notificaciones/services/notificacion_service.dart';
+import 'package:gym/features/payments/services/pago_service.dart';
+
 
 class ListaSociosScreen extends StatefulWidget {
   const ListaSociosScreen({super.key});
@@ -71,6 +74,82 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
     context.read<SociosBloc>().add(CargarSociosEvent());
   }
 
+  void _enviarNotificacion(BuildContext context, Socio socio) {
+    // Guardar el context antes de entrar en operaciones async
+    final messenger = ScaffoldMessenger.of(context);
+    
+    // Mostrar loading inmediatamente
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Enviando recordatorio a ${socio.nombreCompleto}...'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+
+    // Usar then en lugar de await para evitar problemas de context
+    NotificacionService.enviarNotificacionManual(socio).then((resultado) {
+      // Remover el snackbar anterior y mostrar resultado
+      messenger.removeCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(resultado['exitoso'] 
+              ? '✅ Recordatorio enviado a ${socio.nombreCompleto}'
+              : '❌ Error al enviar notificación'),
+          backgroundColor: resultado['exitoso'] ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }).catchError((error) {
+      // Manejar errores
+      messenger.removeCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('❌ Error: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    });
+  }
+
+  void _pagarCuota(BuildContext context, Socio socio) {
+    final messenger = ScaffoldMessenger.of(context);
+    final bloc = context.read<SociosBloc>(); // ← Guardar BLoC antes del async
+    
+    // Mostrar loading
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Procesando pago de ${socio.nombreCompleto}...'),
+        backgroundColor: Colors.blue,
+      ),
+    );
+
+    // Usar then sin problemas de contexto
+    PagoService.procesarPago(socio).then((pagoExitoso) {
+      // Remover loading
+      messenger.removeCurrentSnackBar();
+      
+      if (pagoExitoso) {
+        // Calcular y actualizar fecha
+        final nuevaFecha = PagoService.calcularNuevaFechaVencimiento(socio);
+        final socioActualizado = socio.copyWith(fechaVencimiento: nuevaFecha);
+        bloc.add(ActualizarSocioEvent(socioActualizado)); // ← Usar BLoC guardado
+        
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('✅ Pago exitoso - Vence: ${nuevaFecha.day}/${nuevaFecha.month}/${nuevaFecha.year}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('❌ Error en el pago'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -179,6 +258,8 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
             socio: socio,
             onEdit: () => _editarSocio(context, socio),
             onDelete: () => _eliminarSocio(context, socio),
+            onNotificar: () => _enviarNotificacion(context, socio),
+            onPagarCuota: () => _pagarCuota(context, socio),
           );
         },
       ),

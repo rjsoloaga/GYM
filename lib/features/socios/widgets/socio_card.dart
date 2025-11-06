@@ -6,6 +6,8 @@ class SocioCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback? onCobrar; // Para futura integración con pagos
+  final VoidCallback? onNotificar; // Para futura integración con notificaciones
+  final VoidCallback? onPagarCuota; // Nuevo botón para pagar cuota
 
   const SocioCard({
     super.key,
@@ -13,6 +15,8 @@ class SocioCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     this.onCobrar,
+    this.onNotificar,
+    this.onPagarCuota,
   });
 
   // Método para obtener el color según el estado de la cuota
@@ -153,8 +157,42 @@ class SocioCard extends StatelessWidget {
               ),
               
               const SizedBox(height: 16),
-              
-              // Botones de acción
+
+              // 🆕 BOTÓN DE NOTIFICACIÓN (si está habilitado y el socio lo necesita)
+              if (onNotificar != null && socio.necesitaNotificacion) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onNotificar,
+                    icon: const Icon(Icons.notifications, size: 18),
+                    label: const Text('Enviar Recordatorio'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                      side: const BorderSide(color: Colors.orange),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              // 🆕 BOTÓN PAGAR CUOTA (solo para socios vencidos o por vencer)
+              if (onPagarCuota != null && socio.estadoCuota != 'Verde') ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onPagarCuota,
+                    icon: const Icon(Icons.payment, size: 18),
+                    label: const Text('Pagar Cuota'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              // BOTONES DE ACCIÓN PRINCIPALES
               Row(
                 children: [
                   Expanded(

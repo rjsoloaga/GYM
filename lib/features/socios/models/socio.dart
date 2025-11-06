@@ -25,18 +25,23 @@ class Socio {
     });
 
     //Metodo getter para obtener el estado de la cuota
-    //Devuelve 'Verde' si la cuota esta vencida, 'Amarillo' si falta menos de 15 dias y 'Rojo' si esta vencida
-    String get estadoCuota{
-        final hoy = DateTime.now();
-        final diferencia = fechaVencimiento.difference(hoy).inDays;
+    String get estadoCuota {
+      final hoy = DateTime.now();
+      final diasHastaVencimiento = fechaVencimiento.difference(hoy).inDays;
 
-        if (diferencia >= 0) { 
-            return 'Verde';
-        } else if (diferencia.abs() <= 15) {
-            return 'Ambar';
-        } else {
-            return 'Rojo';
-        }
+      if (diasHastaVencimiento > 7) { 
+        return 'Verde';        // Más de 7 días - TODO BIEN
+      } else if (diasHastaVencimiento >= 0) {
+        return 'Ambar';        // 0-7 días - POR VENCER
+      } else {
+        return 'Rojo';         // Vencido - MOROSO
+      }
+    }
+
+    bool get necesitaNotificacion {
+      final hoy = DateTime.now();
+      final diasHastaVencimiento = fechaVencimiento.difference(hoy).inDays;
+      return diasHastaVencimiento <= 7 && diasHastaVencimiento >= 0;
     }
 
     //Metodo para crear una copia del objeto 'Socio' con los valores modificados
@@ -67,23 +72,23 @@ class Socio {
 
     //Metodo para convertir un socio a un Map(Diccionario)
     Map<String, dynamic> toMap() {
-    final map = {
-      'id': id,
-      'nombreCompleto': nombreCompleto,
-      'dni': dni,
-      'telefono': telefono,
-      'email': email,
-      'fechaInicio': fechaInicio.toIso8601String(),
-      'fechaVencimiento': fechaVencimiento.toIso8601String(),
-      'precioMensual': precioMensual,
-      'tipoPlan': tipoPlan,
-    };
-    // Si el id es nulo, lo removemos del mapa para que la base de datos lo autogenere.
-    if (id == null) {
-      map.remove('id');
+      final map = {
+        'id': id,
+        'nombreCompleto': nombreCompleto,
+        'dni': dni,
+        'telefono': telefono,
+        'email': email,
+        'fechaInicio': fechaInicio.toIso8601String(),
+        'fechaVencimiento': fechaVencimiento.toIso8601String(),
+        'precioMensual': precioMensual,
+        'tipoPlan': tipoPlan,
+      };
+      // Si el id es nulo, lo removemos del mapa para que la base de datos lo autogenere.
+      if (id == null) {
+        map.remove('id');
+      }
+      return map;
     }
-    return map;
-  }
 
     //Metodo para crear un Socio a partir de un Map (de la base de datos)
     factory Socio.fromMap(Map<String, dynamic> map) {
@@ -99,6 +104,4 @@ class Socio {
             tipoPlan: map['tipoPlan'] ?? '',
           );
     }
-
-
 }

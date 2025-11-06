@@ -3,7 +3,10 @@
   "dockerComposeFile": "../docker-compose.yml",
   "service": "flutter-dev",
   "workspaceFolder": "/app",
-  "forwardPorts": [39421],
+  "forwardPorts": [
+    39421,
+    5555 
+  ],
   "extensions": [
     "Dart-Code.flutter",
     "Dart-Code.dart-code"
