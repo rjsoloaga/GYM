@@ -1,10 +1,49 @@
 services:
+  # Servicio para desarrollo
   flutter-dev:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gym-flutter-dev
     volumes:
-      - ./:/app 
+      - ./:/app
+      - flutter-pub-cache:/root/.pub-cache
     ports:
-      - "39421:39421"
+      - "39421:39421"  # Puerto para desarrollo
     stdin_open: true
     tty: true
-    command: flutter run -d web-server --web-port 39421 --web-hostname 0.0.0.0
+    environment:
+      - FLUTTER_WEB_USE_SKIA=false
+    command: >
+      sh -c "flutter pub get && 
+             flutter run -d web-server --web-port 39421 --web-hostname 0.0.0.0"
+    networks:
+      - gym-network
+
+  # Servicio para producción (build estático)
+  flutter-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gym-flutter-prod
+    volumes:
+      - ./:/app
+    ports:
+      - "8081:8080"  # Cambiado a 8081 para evitar conflicto con Adminer
+    command: >
+      sh -c "flutter pub get && 
+             flutter build web --release && 
+             cd build/web && 
+             python3 -m http.server 8080"
+    networks:
+      - gym-network
+    profiles:
+      - production
+
+volumes:
+  flutter-pub-cache:
+    driver: local
+
+networks:
+  gym-network:
+    driver: bridge
