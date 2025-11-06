@@ -343,17 +343,28 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                         value: _tipoPlan,
                         decoration: InputDecoration(
                           labelText: 'Tipo de Plan *',
-                          prefixIcon: const Icon(Icons.calendar_today),
+                          labelStyle: const TextStyle(color: Colors.white70),
+                          prefixIcon: const Icon(Icons.calendar_today, color: Colors.grey),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
                           fillColor: const Color(0xFF2C2C2C),
                         ),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                        dropdownColor: const Color(0xFF2C2C2C),
+                        iconEnabledColor: Colors.white,
+                        iconDisabledColor: Colors.grey,
                         items: _tiposPlan.map((String plan) {
                           return DropdownMenuItem<String>(
                             value: plan,
-                            child: Text(plan),
+                            child: Text(
+                              plan,
+                              style: const TextStyle(color: Colors.white),
+                            ),
                           );
                         }).toList(),
                         onChanged: (String? nuevoPlan) {
@@ -411,11 +422,11 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
+                                    const Text(
                                       'Fecha de Inicio *',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.grey.shade400,
+                                        color: Colors.white70,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -457,11 +468,11 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
+                                    const Text(
                                       'Fecha de Vencimiento *',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.grey.shade400,
+                                        color: Colors.white70,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
