@@ -135,21 +135,46 @@ class DatabaseHelper {
                 'password': 'admin123', // En producción debería estar hasheado
                 'nombre': 'Administrador'
             });
+            print('✅ Usuario administrador creado: admin/admin123');
         }
+    }
+
+    // Método público para asegurar que el usuario por defecto existe
+    Future<void> asegurarUsuarioPorDefecto() async {
+        Database db = await database;
+        await _crearUsuarioPorDefecto(db);
     }
 
     // Métodos para manejo de usuarios
     Future<Map<String, dynamic>?> autenticarUsuario(String username, String password) async {
         Database db = await instance.database;
+        
+        // Verificar si el usuario existe
         final usuarios = await db.query(
+            'usuario',
+            where: 'username = ?',
+            whereArgs: [username],
+        );
+        
+        if (usuarios.isEmpty) {
+            print('❌ Usuario no encontrado: $username');
+            return null;
+        }
+        
+        // Verificar contraseña
+        final usuariosConPassword = await db.query(
             'usuario',
             where: 'username = ? AND password = ?',
             whereArgs: [username, password],
         );
-        if (usuarios.isNotEmpty) {
-            return usuarios.first;
+        
+        if (usuariosConPassword.isNotEmpty) {
+            print('✅ Autenticación exitosa para: $username');
+            return usuariosConPassword.first;
+        } else {
+            print('❌ Contraseña incorrecta para: $username');
+            return null;
         }
-        return null;
     }
 
     Future<int> insertarUsuario(String username, String password, String nombre) async {

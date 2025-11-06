@@ -32,6 +32,9 @@ Future<void> main() async {
     await DatabaseHelper.instance.database;
     print('✅ Base de datos inicializada correctamente');
     
+    // Asegurar que el usuario por defecto existe
+    await DatabaseHelper.instance.asegurarUsuarioPorDefecto();
+    
     // Crear socios ficticios si la base de datos está vacía
     await DatabaseHelper.instance.crearSociosFicticios();
   } catch (e) {
