@@ -68,42 +68,44 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
           brightness: Brightness.dark,
           colorScheme: ColorScheme.dark(
-            primary: const Color(0xFF2196F3), // Azul vibrante
-            secondary: const Color(0xFF03DAC6), // Cyan/Turquesa
-            surface: const Color(0xFF1E1E1E), // Casi negro
-            error: const Color(0xFFCF6679), // Rojo suave
+            primary: const Color(0xFF40E0D0), // Turquesa vibrante - energía y frescura
+            secondary: const Color(0xFF30D5C8), // Turquesa medio - dinamismo
+            tertiary: const Color(0xFF4CAF50), // Verde - salud y crecimiento
+            surface: const Color(0xFF0A0A0A), // Negro intenso como hierro
+            error: const Color(0xFFFF4444), // Rojo para errores (mantener para errores)
             onPrimary: Colors.white,
-            onSecondary: Colors.black,
+            onSecondary: Colors.white,
             onSurface: Colors.white,
             onError: Colors.white,
           ),
-          scaffoldBackgroundColor: const Color(0xFF121212),
+          scaffoldBackgroundColor: const Color(0xFF000000), // Fondo negro puro
           appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF1E1E1E),
+            backgroundColor: Color(0xFF0A0A0A),
             elevation: 0,
             foregroundColor: Colors.white,
           ),
           cardTheme: CardThemeData(
-            color: const Color(0xFF1E1E1E),
-            elevation: 4,
+            color: const Color(0xFF1A1A1A),
+            elevation: 8,
+            shadowColor: const Color(0xFF40E0D0).withValues(alpha: 0.3),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
           ),
           inputDecorationTheme: InputDecorationTheme(
             filled: true,
-            fillColor: const Color(0xFF2C2C2C),
+            fillColor: const Color(0xFF1A1A1A),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF3A3A3A), width: 1),
+              borderSide: const BorderSide(color: Color(0xFF2A2A2A), width: 1),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF2196F3), width: 2),
+              borderSide: const BorderSide(color: Color(0xFF40E0D0), width: 2),
             ),
           ),
         ),

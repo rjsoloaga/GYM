@@ -61,9 +61,9 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF2196F3),
+              primary: Color(0xFF40E0D0),
               onPrimary: Colors.white,
-              surface: Color(0xFF1E1E1E),
+              surface: Color(0xFF1A1A1A),
               onSurface: Colors.white,
             ),
           ),
@@ -90,9 +90,9 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF2196F3),
+              primary: Color(0xFF40E0D0),
               onPrimary: Colors.white,
-              surface: Color(0xFF1E1E1E),
+              surface: Color(0xFF1A1A1A),
               onSurface: Colors.white,
             ),
           ),
@@ -139,9 +139,9 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
 
     if (_fechaInicio == null || _fechaVencimiento == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor selecciona las fechas'),
-          backgroundColor: Color(0xFFCF6679),
+        SnackBar(
+          content: const Text('Por favor selecciona las fechas'),
+          backgroundColor: const Color(0xFF40E0D0),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -200,16 +200,25 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
         title: Text(widget.socioParaEditar == null ? 'Agregar Nuevo Socio' : 'Editar Socio'),
         elevation: 0,
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0D1B2A), Color(0xFF1B263B)],
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF000000), Color(0xFF1A0000)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
         ),
       ),
       body: Container(
         decoration: const BoxDecoration(
-          color: Color(0xFF121212),
+          color: Color(0xFF000000),
         ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -221,15 +230,21 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                 // Tarjeta del formulario
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E),
+                    color: const Color(0xFF1A1A1A),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: const Color(0xFF3A3A3A),
-                      width: 1,
+                      color: const Color(0xFF40E0D0).withValues(alpha: 0.3),
+                      width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.5),
+                        color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
+                        spreadRadius: 2,
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.8),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -244,12 +259,13 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                         controller: _nombreController,
                         decoration: InputDecoration(
                           labelText: 'Nombre Completo *',
-                          prefixIcon: const Icon(Icons.person),
+                          prefixIcon: const Icon(Icons.person, color: Colors.grey),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: const Color(0xFF2C2C2C),
+                          fillColor: const Color(0xFF1A1A1A),
+                          labelStyle: const TextStyle(color: Colors.white70),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
@@ -269,12 +285,13 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                         controller: _dniController,
                         decoration: InputDecoration(
                           labelText: 'DNI *',
-                          prefixIcon: const Icon(Icons.badge),
+                          prefixIcon: const Icon(Icons.badge, color: Colors.grey),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: const Color(0xFF2C2C2C),
+                          fillColor: const Color(0xFF1A1A1A),
+                          labelStyle: const TextStyle(color: Colors.white70),
                           enabled: widget.socioParaEditar == null,
                         ),
                         keyboardType: TextInputType.number,
@@ -295,12 +312,13 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                         controller: _telefonoController,
                         decoration: InputDecoration(
                           labelText: 'Teléfono',
-                          prefixIcon: const Icon(Icons.phone),
+                          prefixIcon: const Icon(Icons.phone, color: Colors.grey),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: const Color(0xFF2C2C2C),
+                          fillColor: const Color(0xFF1A1A1A),
+                          labelStyle: const TextStyle(color: Colors.white70),
                         ),
                         keyboardType: TextInputType.phone,
                         validator: (value) {
@@ -317,12 +335,13 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                         controller: _correoController,
                         decoration: InputDecoration(
                           labelText: 'Correo Electrónico',
-                          prefixIcon: const Icon(Icons.email),
+                          prefixIcon: const Icon(Icons.email, color: Colors.grey),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: const Color(0xFF2C2C2C),
+                          fillColor: const Color(0xFF1A1A1A),
+                          labelStyle: const TextStyle(color: Colors.white70),
                         ),
                         keyboardType: TextInputType.emailAddress,
                         validator: (value) {
@@ -349,13 +368,13 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: const Color(0xFF2C2C2C),
+                          fillColor: const Color(0xFF1A1A1A),
                         ),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                         ),
-                        dropdownColor: const Color(0xFF2C2C2C),
+                        dropdownColor: const Color(0xFF1A1A1A),
                         iconEnabledColor: Colors.white,
                         iconDisabledColor: Colors.grey,
                         items: _tiposPlan.map((String plan) {
@@ -383,12 +402,13 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                         controller: _precioController,
                         decoration: InputDecoration(
                           labelText: 'Precio Mensual *',
-                          prefixIcon: const Icon(Icons.attach_money),
+                          prefixIcon: const Icon(Icons.attach_money, color: Colors.grey),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: const Color(0xFF2C2C2C),
+                          fillColor: const Color(0xFF1A1A1A),
+                          labelStyle: const TextStyle(color: Colors.white70),
                         ),
                         keyboardType: TextInputType.numberWithOptions(decimal: true),
                         validator: (value) {
@@ -410,9 +430,11 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2C2C2C),
+                            color: const Color(0xFF1A1A1A),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF3A3A3A)),
+                            border: Border.all(
+                              color: const Color(0xFF40E0D0).withValues(alpha: 0.3),
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -456,9 +478,11 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2C2C2C),
+                            color: const Color(0xFF1A1A1A),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF3A3A3A)),
+                            border: Border.all(
+                              color: const Color(0xFF40E0D0).withValues(alpha: 0.3),
+                            ),
                           ),
                           child: Row(
                             children: [
@@ -500,22 +524,48 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                 const SizedBox(height: 24),
 
                 // Botón Guardar
-                                  ElevatedButton(
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF40E0D0), Color(0xFF30D5C8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF4444).withValues(alpha: 0.4),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
                     onPressed: _guardarSocio,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2196F3),
+                      backgroundColor: Colors.transparent,
                       foregroundColor: Colors.white,
+                      shadowColor: Colors.transparent,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 3,
+                      elevation: 0,
                     ),
-                  child: const Text(
-                    'Guardar Socio',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.fitness_center, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          'Guardar Socio',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

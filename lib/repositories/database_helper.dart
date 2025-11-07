@@ -345,6 +345,24 @@ class DatabaseHelper {
         }
     }
 
+    Future<double> getIngresosDiarios() async {
+        try {
+            final ahora = DateTime.now();
+            final inicioDia = DateTime(ahora.year, ahora.month, ahora.day, 0, 0, 0);
+            final finDia = DateTime(ahora.year, ahora.month, ahora.day, 23, 59, 59);
+
+            final pagos = await getPagosPorFecha(inicioDia, finDia);
+            double total = 0.0;
+            for (var pago in pagos) {
+                total += pago.monto;
+            }
+            return total;
+        } catch (e) {
+            print('Error al calcular ingresos diarios: $e');
+            return 0.0;
+        }
+    }
+
     Future<int> getTotalSocios() async {
         try {
             final socios = await getSocios();

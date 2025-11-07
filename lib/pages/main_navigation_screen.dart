@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym/blocs/auth_bloc.dart';
 import 'package:gym/pages/dashboard_screen.dart';
 import 'package:gym/pages/lista_socios_screen.dart';
+import 'package:gym/widgets/date_time_display.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -12,11 +13,12 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
+  // Dashboard es el protagonista - índice 0
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
-    const ListaSociosScreen(),
-    const DashboardScreen(),
+    const DashboardScreen(), // Dashboard primero (índice 0)
+    const ListaSociosScreen(), // Socios segundo (índice 1)
   ];
 
   void _logout(BuildContext context) {
@@ -90,30 +92,111 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     _currentIndex = index;
                   });
                 },
-                backgroundColor: const Color(0xFF1E1E1E),
-                selectedItemColor: const Color(0xFF2196F3),
-                unselectedItemColor: Colors.grey,
+                backgroundColor: const Color(0xFF0A0A0A),
+                selectedItemColor: const Color(0xFF40E0D0),
+                unselectedItemColor: Colors.grey.shade600,
                 type: BottomNavigationBarType.fixed,
+                selectedLabelStyle: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
                 items: const [
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.people),
-                    label: 'Socios',
+                    icon: Icon(Icons.dashboard_outlined),
+                    activeIcon: Icon(Icons.dashboard),
+                    label: 'Dashboard',
                   ),
                   BottomNavigationBarItem(
-                    icon: Icon(Icons.dashboard),
-                    label: 'Dashboard',
+                    icon: Icon(Icons.people_outline),
+                    activeIcon: Icon(Icons.people),
+                    label: 'Socios',
                   ),
                 ],
               ),
             ),
             appBar: AppBar(
-              title: Text(_currentIndex == 0 ? 'Socios' : 'Dashboard'),
+              title: _currentIndex == 0
+                  ? Row(
+                      children: [
+                        const Text('Dashboard'),
+                        const Spacer(),
+                        DateTimeDisplay(
+                          showDate: true, // Mostrar fecha y hora
+                          showTime: true,
+                          textStyle: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        // Logo Lobo 2
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.asset(
+                              'lobo2.png',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Título con nombre del usuario
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'Gym Manager',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              'Hola ${authState.nombre}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
               elevation: 0,
               flexibleSpace: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF0D1B2A), Color(0xFF1B263B)],
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF000000), Color(0xFF1A0000)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
               ),
               actions: [

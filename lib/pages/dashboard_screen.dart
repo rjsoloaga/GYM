@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:gym/repositories/database_helper.dart';
 import 'package:gym/models/socio.dart';
+import 'package:gym/widgets/gym_animated_background.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -28,6 +29,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<Map<String, dynamic>> _obtenerEstadisticas() async {
     final socios = await DatabaseHelper.instance.getSocios();
     final ingresosMensuales = await DatabaseHelper.instance.getIngresosMensuales();
+    final ingresosDiarios = await DatabaseHelper.instance.getIngresosDiarios();
     final cuotasVencidas = await DatabaseHelper.instance.getCuotasVencidas();
     final cuotasPorVencer = await DatabaseHelper.instance.getCuotasPorVencer(7);
 
@@ -44,6 +46,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return {
       'totalSocios': socios.length,
       'ingresosMensuales': ingresosMensuales,
+      'ingresosDiarios': ingresosDiarios,
       'cuotasVencidas': cuotasVencidas,
       'cuotasPorVencer': cuotasPorVencer,
       'sociosPorVencer': sociosPorVencer,
@@ -55,40 +58,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: null, // Remover AppBar aquí porque lo maneja MainNavigationScreen
-      body: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF121212),
-        ),
+      body: GymAnimatedBackground(
+        particleCount: 15,
+        showGrid: false,
+        weightsOnly: true, // Solo mancuernas en el dashboard
         child: SafeArea(
           child: RefreshIndicator(
             onRefresh: () async => _cargarEstadisticas(),
-            color: const Color(0xFF2196F3),
+            color: const Color(0xFF40E0D0),
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Título
-                  Row(
-                    children: [
-                      const Icon(Icons.dashboard, color: Colors.white, size: 28),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Dashboard',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                  // Logo Lobo 2 con más espacio
+                  Center(
+                    child: Container(
+                      width: 150,
+                      height: 150,
+                      margin: const EdgeInsets.symmetric(vertical: 20),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF40E0D0).withValues(alpha: 0.4),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                            spreadRadius: 2,
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            blurRadius: 15,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset(
+                          'lobo2.png',
+                          fit: BoxFit.cover,
                         ),
                       ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.white),
+                    ),
+                  ),
+                  
+                  // Botón de actualizar
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFF40E0D0).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.refresh, color: Color(0xFF40E0D0)),
                         onPressed: _cargarEstadisticas,
                         tooltip: 'Actualizar',
                       ),
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 24),
 
@@ -118,17 +150,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 child: _buildMetricCard(
                                   'Total Socios',
                                   stats['totalSocios'].toString(),
-                                  Icons.people,
-                                  const Color(0xFF2196F3),
+                                  Icons.people_outline,
+                                  const Color(0xFF40E0D0),
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _buildMetricCard(
-                                  'Ingresos Mensuales',
-                                  '\$${_formatNumber(stats['ingresosMensuales'] as double)}',
-                                  Icons.attach_money,
-                                  const Color(0xFF4CAF50),
+                                  'Ingresos Diarios',
+                                  '\$${_formatNumber(stats['ingresosDiarios'] as double)}',
+                                  Icons.today,
+                                  const Color(0xFF30D5C8),
                                 ),
                               ),
                             ],
@@ -138,21 +170,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             children: [
                               Expanded(
                                 child: _buildMetricCard(
-                                  'Cuotas Vencidas',
-                                  stats['cuotasVencidas'].toString(),
-                                  Icons.error,
-                                  const Color(0xFFCF6679),
+                                  'Ingresos Mensuales',
+                                  '\$${_formatNumber(stats['ingresosMensuales'] as double)}',
+                                  Icons.trending_up,
+                                  const Color(0xFF4CAF50),
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _buildMetricCard(
-                                  'Por Vencer (7 días)',
-                                  stats['cuotasPorVencer'].toString(),
-                                  Icons.warning,
-                                  Colors.amber,
+                                  'Cuotas Vencidas',
+                                  stats['cuotasVencidas'].toString(),
+                                  Icons.error_outline,
+                                  const Color(0xFF40E0D0),
                                 ),
                               ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildMetricCard(
+                                  'Por Vencer (7 días)',
+                                  stats['cuotasPorVencer'].toString(),
+                                  Icons.warning_amber_rounded,
+                                  const Color(0xFF30D5C8),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Espacio vacío para mantener el diseño
+                              Expanded(child: Container()),
                             ],
                           ),
                           const SizedBox(height: 24),
@@ -181,12 +229,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF3A3A3A)),
+        border: Border.all(
+          color: color.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: color.withValues(alpha: 0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+            spreadRadius: 1,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -198,31 +255,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  gradient: LinearGradient(
+                    colors: [
+                      color.withValues(alpha: 0.3),
+                      color.withValues(alpha: 0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.5),
+                    width: 1,
+                  ),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: color, size: 26),
               ),
               const Spacer(),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             valor,
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 32,
               fontWeight: FontWeight.bold,
               color: color,
+              letterSpacing: 0.5,
+              shadows: [
+                Shadow(
+                  color: color.withValues(alpha: 0.5),
+                  blurRadius: 10,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             titulo,
             style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade400,
+              fontSize: 13,
+              color: Colors.grey.shade300,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.3,
             ),
           ),
         ],

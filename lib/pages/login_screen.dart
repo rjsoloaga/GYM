@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym/blocs/auth_bloc.dart';
+import 'package:gym/widgets/gym_animated_background.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -51,18 +52,10 @@ class _LoginScreenState extends State<LoginScreen> {
             Navigator.of(context).pushReplacementNamed('/main');
           }
         },
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF0D1B2A), // Azul muy oscuro
-                const Color(0xFF1B263B), // Azul oscuro
-                const Color(0xFF415A77), // Azul medio oscuro
-              ],
-            ),
-          ),
+        child: GymAnimatedBackground(
+          particleCount: 20,
+          showGrid: false, // Sin grid para evitar efectos rojos
+          weightsOnly: true, // Solo mancuernas
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -70,58 +63,57 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                                         // Logo/Icono
-                     Container(
-                       width: 240,
-                       height: 240,
-                       decoration: BoxDecoration(
-                         shape: BoxShape.circle,
-                         border: Border.all(
-                           color: Colors.white.withValues(alpha: 0.15),
-                           width: 3,
-                         ),
-                         boxShadow: [
-                           BoxShadow(
-                             color: Colors.black.withValues(alpha: 0.5),
-                             blurRadius: 25,
-                             offset: const Offset(0, 10),
-                             spreadRadius: 3,
-                           ),
-                         ],
-                       ),
-                       child: ClipOval(
-                         child: ColorFiltered(
-                           colorFilter: const ColorFilter.matrix([
-                             1.25, 0, 0, 0, 20,    // Aumentar brillo y contraste R
-                             0, 1.25, 0, 0, 20,   // Aumentar brillo y contraste G
-                             0, 0, 1.25, 0, 20,   // Aumentar brillo y contraste B
-                             0, 0, 0, 1, 0,       // Alpha sin cambios
-                           ]),
-                           child: Image.asset(
-                             'lobo.png',
-                             fit: BoxFit.cover,
-                           ),
-                         ),
-                       ),
-                     ),
+                    // Logo - Lobo 1 (circular)
+                    Container(
+                      width: 240,
+                      height: 240,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle, // Forma circular
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF40E0D0).withValues(alpha: 0.4),
+                            blurRadius: 30,
+                            offset: const Offset(0, 10),
+                            spreadRadius: 2,
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.asset(
+                          'lobo1.png',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 50),
 
                     // Formulario de login
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E1E),
+                        color: const Color(0xFF1A1A1A),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.5),
+                            color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
+                            blurRadius: 30,
+                            offset: const Offset(0, 10),
+                            spreadRadius: 2,
+                          ),
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.8),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
                         ],
                         border: Border.all(
-                          color: const Color(0xFF3A3A3A),
-                          width: 1,
+                          color: const Color(0xFF40E0D0).withValues(alpha: 0.3),
+                          width: 1.5,
                         ),
                       ),
                       child: Form(
@@ -199,22 +191,48 @@ class _LoginScreenState extends State<LoginScreen> {
                                   );
                                 }
 
-                                return ElevatedButton(
-                                  onPressed: _handleLogin,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2196F3),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF40E0D0), Color(0xFF30D5C8)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
-                                    elevation: 3,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF40E0D0).withValues(alpha: 0.4),
+                                        blurRadius: 15,
+                                        offset: const Offset(0, 5),
+                                      ),
+                                    ],
                                   ),
-                                  child: const Text(
-                                    'Iniciar Sesión',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                  child: ElevatedButton(
+                                    onPressed: _handleLogin,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.transparent,
+                                      foregroundColor: Colors.white,
+                                      shadowColor: Colors.transparent,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 0,
+                                    ),
+                                    child: const Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.fitness_center, size: 20),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Iniciar Sesión',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 );

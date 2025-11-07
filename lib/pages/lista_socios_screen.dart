@@ -128,119 +128,55 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
           appBar: null, // Remover AppBar aquí porque lo maneja MainNavigationScreen
           body: Container(
             decoration: const BoxDecoration(
-              color: Color(0xFF121212),
+              color: Color(0xFF000000),
             ),
             child: SafeArea(
               child: Column(
                 children: [
-                  // AppBar personalizado
-                  Container(
+                  // Barra de búsqueda
+                  Padding(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0D1B2A), Color(0xFF1B263B)],
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E1E),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFF3A3A3A),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 5,
+                          ),
+                        ],
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
+                      child: TextField(
+                        controller: _searchController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: 'Buscar por nombre, DNI, teléfono o correo...',
+                          hintStyle: TextStyle(color: Colors.grey.shade400),
+                          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, color: Colors.grey),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    context.read<SociosBloc>().add(BuscarSociosEvent(''));
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.1),
-                                  width: 1,
-                                ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(7),
-                                child: Image.asset(
-                                  'lobo.png',
-                                  width: 32,
-                                  height: 32,
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Gym Manager',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Hola, ${authState.nombre}',
-                                    style: TextStyle(
-                                      color: Colors.white.withValues(alpha: 0.9),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        // Barra de búsqueda
-                        Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1E1E1E),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFF3A3A3A),
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 5,
-                              ),
-                            ],
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              hintText: 'Buscar por nombre, DNI, teléfono o correo...',
-                              hintStyle: TextStyle(color: Colors.grey.shade400),
-                              prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                              suffixIcon: _searchController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear, color: Colors.grey),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        context.read<SociosBloc>().add(BuscarSociosEvent(''));
-                                      },
-                                    )
-                                  : null,
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            ),
-                            onChanged: (texto) {
-                              // Disparar evento de búsqueda al BLoC
-                              if (mounted) {
-                                context.read<SociosBloc>().add(BuscarSociosEvent(texto));
-                              }
-                            },
-                          ),
-                        ),
-                      ],
+                        onChanged: (texto) {
+                          // Disparar evento de búsqueda al BLoC
+                          if (mounted) {
+                            context.read<SociosBloc>().add(BuscarSociosEvent(texto));
+                          }
+                        },
+                      ),
                     ),
                   ),
                   
@@ -250,13 +186,35 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
               ),
             ),
           ),
-                        floatingActionButton: FloatingActionButton.extended(
-                onPressed: () => _agregarSocio(context),
-                backgroundColor: const Color(0xFF2196F3),
-                icon: const Icon(Icons.add, color: Colors.white),
-                label: const Text(
-                  'Nuevo Socio',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        floatingActionButton: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF40E0D0), Color(0xFF30D5C8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF40E0D0).withValues(alpha: 0.4),
+                      blurRadius: 15,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: FloatingActionButton.extended(
+                  onPressed: () => _agregarSocio(context),
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  icon: const Icon(Icons.person_add, color: Colors.white),
+                  label: const Text(
+                    'Nuevo Socio',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                 ),
               ),
         );
@@ -342,15 +300,21 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF3A3A3A),
-          width: 1,
+          color: const Color(0xFF2A2A2A),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: colorEstado.withValues(alpha: 0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+            spreadRadius: 1,
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -469,20 +433,40 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
                 Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.payments, color: Color(0xFF4CAF50)),
-                      onPressed: () => _verHistorialPagos(context, socio),
-                      tooltip: 'Historial de pagos',
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF4CAF50).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.payments, color: Color(0xFF4CAF50)),
+                        onPressed: () => _verHistorialPagos(context, socio),
+                        tooltip: 'Historial de pagos',
+                      ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Color(0xFF2196F3)),
-                      onPressed: () => _editarSocio(context, socio),
-                      tooltip: 'Editar',
+                    const SizedBox(height: 4),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.edit, color: Color(0xFF40E0D0)),
+                        onPressed: () => _editarSocio(context, socio),
+                        tooltip: 'Editar',
+                      ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Color(0xFFCF6679)),
-                      onPressed: () => _eliminarSocio(context, socio),
-                      tooltip: 'Eliminar',
+                    const SizedBox(height: 4),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.delete, color: Color(0xFF40E0D0)),
+                        onPressed: () => _eliminarSocio(context, socio),
+                        tooltip: 'Eliminar',
+                      ),
                     ),
                   ],
                 ),
