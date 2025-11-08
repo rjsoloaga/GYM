@@ -186,37 +186,46 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
               ),
             ),
           ),
-                        floatingActionButton: Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF40E0D0), Color(0xFF30D5C8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF40E0D0).withValues(alpha: 0.4),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: FloatingActionButton.extended(
-                  onPressed: () => _agregarSocio(context),
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  icon: const Icon(Icons.person_add, color: Colors.white),
-                  label: const Text(
-                    'Nuevo Socio',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ),
+                        floatingActionButton: BlocBuilder<AuthBloc, AuthState>(
+                          builder: (context, authState) {
+                            // Solo mostrar botón de agregar si el usuario es admin
+                            if (authState is AuthAuthenticatedState && authState.puedeAgregar) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF40E0D0), Color(0xFF30D5C8)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF40E0D0).withValues(alpha: 0.4),
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
+                                ),
+                                child: FloatingActionButton.extended(
+                                  onPressed: () => _agregarSocio(context),
+                                  backgroundColor: Colors.transparent,
+                                  elevation: 0,
+                                  icon: const Icon(Icons.person_add, color: Colors.white),
+                                  label: const Text(
+                                    'Nuevo Socio',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
+                            // Usuario coach - no mostrar botón de agregar
+                            return const SizedBox.shrink();
+                          },
+                        ),
         );
         },
       ),
@@ -324,7 +333,13 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: () => _editarSocio(context, socio),
+          onTap: () {
+            // Solo permitir editar si el usuario es admin
+            final authState = context.read<AuthBloc>().state;
+            if (authState is AuthAuthenticatedState && authState.puedeEditar) {
+              _editarSocio(context, socio);
+            }
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -429,46 +444,65 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
                   ),
                 ),
                 
-                // Botones de acción
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF4CAF50).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.payments, color: Color(0xFF4CAF50)),
-                        onPressed: () => _verHistorialPagos(context, socio),
-                        tooltip: 'Historial de pagos',
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.edit, color: Color(0xFF40E0D0)),
-                        onPressed: () => _editarSocio(context, socio),
-                        tooltip: 'Editar',
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.delete, color: Color(0xFF40E0D0)),
-                        onPressed: () => _eliminarSocio(context, socio),
-                        tooltip: 'Eliminar',
-                      ),
-                    ),
-                  ],
+                // Botones de acción (solo para admins)
+                BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, authState) {
+                    if (authState is! AuthAuthenticatedState || !authState.puedeEditar) {
+                      // Usuario coach - solo mostrar historial de pagos
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4CAF50).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.payments, color: Color(0xFF4CAF50)),
+                          onPressed: () => _verHistorialPagos(context, socio),
+                          tooltip: 'Historial de pagos',
+                        ),
+                      );
+                    }
+                    // Usuario admin - mostrar todos los botones
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4CAF50).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.payments, color: Color(0xFF4CAF50)),
+                            onPressed: () => _verHistorialPagos(context, socio),
+                            tooltip: 'Historial de pagos',
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.edit, color: Color(0xFF40E0D0)),
+                            onPressed: () => _editarSocio(context, socio),
+                            tooltip: 'Editar',
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.delete, color: Color(0xFF40E0D0)),
+                            onPressed: () => _eliminarSocio(context, socio),
+                            tooltip: 'Eliminar',
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

@@ -5,6 +5,7 @@ import 'package:gym/blocs/pagos_bloc.dart';
 import 'package:gym/models/socio.dart';
 import 'package:gym/models/pago.dart';
 import 'package:gym/pages/agregar_pago_screen.dart';
+import 'package:gym/widgets/date_time_display.dart';
 
 class HistorialPagosScreen extends StatefulWidget {
   final Socio socio;
@@ -26,7 +27,26 @@ class _HistorialPagosScreenState extends State<HistorialPagosScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Historial de Pagos - ${widget.socio.nombreCompleto}'),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Historial de Pagos - ${widget.socio.nombreCompleto}',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            DateTimeDisplay(
+              showDate: true,
+              showTime: true,
+              textStyle: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
+        ),
         elevation: 0,
         flexibleSpace: Container(
           decoration: const BoxDecoration(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym/blocs/auth_bloc.dart';
-import 'package:gym/widgets/gym_animated_background.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -49,13 +48,13 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           } else if (state is AuthAuthenticatedState) {
             // La navegación se maneja automáticamente por AuthWrapper
-            Navigator.of(context).pushReplacementNamed('/main');
+            // AuthWrapper redirigirá a SelectionScreen cuando detecte AuthAuthenticatedState
           }
         },
-        child: GymAnimatedBackground(
-          particleCount: 20,
-          showGrid: false, // Sin grid para evitar efectos rojos
-          weightsOnly: true, // Solo mancuernas
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF000000),
+          ),
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(

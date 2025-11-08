@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:gym/blocs/socios_bloc.dart';
 import 'package:gym/models/socio.dart';
+import 'package:gym/widgets/date_time_display.dart';
 
 class AgregarSocioScreen extends StatefulWidget {
   final Socio? socioParaEditar;
@@ -197,7 +198,23 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.socioParaEditar == null ? 'Agregar Nuevo Socio' : 'Editar Socio'),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(widget.socioParaEditar == null ? 'Agregar Nuevo Socio' : 'Editar Socio'),
+            ),
+            DateTimeDisplay(
+              showDate: true,
+              showTime: true,
+              textStyle: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
+        ),
         elevation: 0,
         flexibleSpace: Container(
           decoration: BoxDecoration(

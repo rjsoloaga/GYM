@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym/pages/login_screen.dart';
 import 'package:gym/pages/main_navigation_screen.dart';
+import 'package:gym/pages/selection_screen.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sqflite/sqflite.dart';
@@ -34,6 +35,9 @@ Future<void> main() async {
     
     // Asegurar que el usuario por defecto existe
     await DatabaseHelper.instance.asegurarUsuarioPorDefecto();
+    
+    // Asegurar que el usuario coach existe (forzar creación si no existe)
+    await DatabaseHelper.instance.crearUsuarioCoachManual();
     
     // Crear socios ficticios si la base de datos está vacía
     await DatabaseHelper.instance.crearSociosFicticios();
@@ -127,7 +131,7 @@ class AuthWrapper extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         if (state is AuthAuthenticatedState) {
-          return const MainNavigationScreen();
+          return const SelectionScreen();
         } else if (state is AuthUnauthenticatedState || state is AuthInitialState) {
           return const LoginScreen();
         } else if (state is AuthLoadingState) {

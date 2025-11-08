@@ -6,15 +6,25 @@ import 'package:gym/pages/lista_socios_screen.dart';
 import 'package:gym/widgets/date_time_display.dart';
 
 class MainNavigationScreen extends StatefulWidget {
-  const MainNavigationScreen({super.key});
+  final int initialIndex;
+  
+  const MainNavigationScreen({
+    super.key,
+    this.initialIndex = 0,
+  });
 
   @override
   State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  // Dashboard es el protagonista - índice 0
-  int _currentIndex = 0;
+  late int _currentIndex;
+  
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   final List<Widget> _screens = [
     const DashboardScreen(), // Dashboard primero (índice 0)
@@ -47,8 +57,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             onPressed: () {
               context.read<AuthBloc>().add(LogoutEvent());
               Navigator.pop(context);
+              // El AuthWrapper manejará la navegación automáticamente
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFCF6679)),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF40E0D0)),
             child: const Text('Cerrar Sesión', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -72,9 +83,16 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             );
           }
 
-          return Scaffold(
-            body: _screens[_currentIndex],
-            bottomNavigationBar: Container(
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) {
+              if (!didPop) {
+                _volverAMenu(context);
+              }
+            },
+            child: Scaffold(
+              body: _screens[_currentIndex],
+              bottomNavigationBar: Container(
               decoration: BoxDecoration(
                 color: const Color(0xFF1E1E1E),
                 boxShadow: [
@@ -115,10 +133,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
             ),
             appBar: AppBar(
+              toolbarHeight: 80, // Aumentar altura del AppBar
               title: _currentIndex == 0
                   ? Row(
                       children: [
-                        const Text('Dashboard'),
+                        Text(authState.rol == 'admin' ? 'Administrador' : authState.nombre),
                         const Spacer(),
                         DateTimeDisplay(
                           showDate: true, // Mostrar fecha y hora
@@ -134,51 +153,68 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     )
                   : Row(
                       children: [
-                        // Logo Lobo 2
+                        // Logo Lobo 2 - más grande
                         Container(
-                          width: 40,
-                          height: 40,
+                          width: 60,
+                          height: 60,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF40E0D0).withValues(alpha: 0.2),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                                color: const Color(0xFF40E0D0).withValues(alpha: 0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 3),
                               ),
                             ],
                           ),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                             child: Image.asset(
                               'lobo2.png',
                               fit: BoxFit.cover,
                             ),
                           ),
                         ),
+                        const SizedBox(width: 16),
+                        // Título
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'LOBO',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                authState.rol == 'admin' ? 'Administrador' : authState.nombre,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         const SizedBox(width: 12),
-                        // Título con nombre del usuario
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              'Gym Manager',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              'Hola ${authState.nombre}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.white.withValues(alpha: 0.8),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                        DateTimeDisplay(
+                          showDate: true, // Mostrar fecha y hora
+                          showTime: true,
+                          textStyle: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: 0.3,
+                          ),
                         ),
                       ],
                     ),
@@ -200,6 +236,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 ),
               ),
               actions: [
+                // Botón para volver al menú principal
+                IconButton(
+                  icon: const Icon(Icons.home),
+                  onPressed: () => _volverAMenu(context),
+                  tooltip: 'Volver al menú principal',
+                ),
                 IconButton(
                   icon: const Icon(Icons.logout),
                   onPressed: () => _logout(context),
@@ -207,9 +249,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 ),
               ],
             ),
+            ),
           );
         },
       ),
     );
+  }
+
+  void _volverAMenu(BuildContext context) {
+    Navigator.pop(context);
   }
 }

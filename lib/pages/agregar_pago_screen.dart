@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:gym/blocs/pagos_bloc.dart';
 import 'package:gym/models/socio.dart';
 import 'package:gym/models/pago.dart';
+import 'package:gym/widgets/date_time_display.dart';
 
 class AgregarPagoScreen extends StatefulWidget {
   final Socio socio;
@@ -97,7 +98,23 @@ class _AgregarPagoScreenState extends State<AgregarPagoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Registrar Pago'),
+        title: Row(
+          children: [
+            const Expanded(
+              child: Text('Registrar Pago'),
+            ),
+            DateTimeDisplay(
+              showDate: true,
+              showTime: true,
+              textStyle: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ],
+        ),
         elevation: 0,
         flexibleSpace: Container(
           decoration: const BoxDecoration(

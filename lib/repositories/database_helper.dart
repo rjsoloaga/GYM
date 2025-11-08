@@ -30,7 +30,7 @@ class DatabaseHelper {
             //Abre o crea la base de datos en la ruta especificada
             final db = await openDatabase(
                 path,
-                version: 4, // Incrementado para agregar tabla de pagos
+                version: 5, // Incrementado para agregar campo rol a usuario
                 onCreate: _createTable, //Funcion que ejecuta al crear la db por primera vez
                 onUpgrade: (db, oldVersion, newVersion) async {
                   // Si la versión es 1 y necesitamos actualizar a 2, crear la tabla de usuarios
@@ -67,6 +67,43 @@ class DatabaseHelper {
                     ''');
                     print('✅ Tabla pago creada correctamente');
                   }
+                  // Si la versión es menor a 5, agregar columna rol a usuario
+                  if (oldVersion < 5) {
+                    try {
+                      await db.execute('''
+                        ALTER TABLE usuario ADD COLUMN rol TEXT DEFAULT 'admin'
+                      ''');
+                      // Actualizar usuarios existentes a admin
+                      await db.update('usuario', {'rol': 'admin'});
+                      // Migrar usuario viewer a coach si existe
+                      final usuariosViewer = await db.query('usuario', where: 'username = ?', whereArgs: ['viewer']);
+                      if (usuariosViewer.isNotEmpty) {
+                        await db.update('usuario', {'rol': 'coach', 'username': 'coach', 'nombre': 'Coach'}, where: 'username = ?', whereArgs: ['viewer']);
+                        print('✅ Usuario viewer migrado a coach');
+                      }
+                      print('✅ Columna rol agregada a la tabla usuario');
+                      // Crear usuario coach si no existe
+                      await _crearUsuarioPorDefecto(db);
+                    } catch (e) {
+                      print('⚠️ Error al agregar columna rol (puede que ya exista): $e');
+                      // Intentar migrar viewer a coach si existe
+                      try {
+                        final usuariosViewer = await db.query('usuario', where: 'username = ?', whereArgs: ['viewer']);
+                        if (usuariosViewer.isNotEmpty) {
+                          await db.update('usuario', {'rol': 'coach', 'username': 'coach', 'nombre': 'Coach'}, where: 'username = ?', whereArgs: ['viewer']);
+                          print('✅ Usuario viewer migrado a coach');
+                        }
+                      } catch (e3) {
+                        print('⚠️ Error al migrar viewer a coach: $e3');
+                      }
+                      // Intentar crear usuarios por defecto de todas formas
+                      try {
+                        await _crearUsuarioPorDefecto(db);
+                      } catch (e2) {
+                        print('⚠️ Error al crear usuarios por defecto: $e2');
+                      }
+                    }
+                  }
                 },
             );
             return db;
@@ -85,7 +122,8 @@ class DatabaseHelper {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT NOT NULL UNIQUE,
                     password TEXT NOT NULL,
-                    nombre TEXT NOT NULL
+                    nombre TEXT NOT NULL,
+                    rol TEXT DEFAULT 'admin'
                 )
             ''');
 
@@ -126,54 +164,241 @@ class DatabaseHelper {
         }
     }
 
-    // Crear usuario administrador por defecto
+    // Crear usuarios por defecto
     Future<void> _crearUsuarioPorDefecto(Database db) async {
-        final usuarios = await db.query('usuario', where: 'username = ?', whereArgs: ['admin']);
-        if (usuarios.isEmpty) {
-            await db.insert('usuario', {
-                'username': 'admin',
-                'password': 'admin123', // En producción debería estar hasheado
-                'nombre': 'Administrador'
-            });
-            print('✅ Usuario administrador creado: admin/admin123');
+        try {
+            // Verificar si existe la columna rol consultando la estructura de la tabla
+            final tableInfo = await db.rawQuery('PRAGMA table_info(usuario)');
+            final tieneRol = tableInfo.any((column) => column['name'] == 'rol');
+            
+            // Crear usuario admin
+            final usuariosAdmin = await db.query('usuario', where: 'username = ?', whereArgs: ['admin']);
+            if (usuariosAdmin.isEmpty) {
+                final adminData = <String, dynamic>{
+                    'username': 'admin',
+                    'password': 'admin123', // En producción debería estar hasheado
+                    'nombre': 'Administrador'
+                };
+                if (tieneRol) {
+                    adminData['rol'] = 'admin';
+                }
+                await db.insert('usuario', adminData);
+                print('✅ Usuario administrador creado: admin/admin123 (rol: admin)');
+            } else if (tieneRol) {
+                // Verificar si el admin tiene rol, si no, actualizarlo
+                final admin = usuariosAdmin.first;
+                if (admin['rol'] == null || admin['rol'].toString().isEmpty) {
+                    await db.update('usuario', {'rol': 'admin'}, where: 'username = ?', whereArgs: ['admin']);
+                    print('✅ Rol de admin actualizado');
+                }
+            }
+            
+            // Crear usuario coach (solo si la columna rol existe)
+            if (tieneRol) {
+                final usuariosCoach = await db.query('usuario', where: 'username = ?', whereArgs: ['coach']);
+                if (usuariosCoach.isEmpty) {
+                    await db.insert('usuario', {
+                        'username': 'coach',
+                        'password': 'coach123', // En producción debería estar hasheado
+                        'nombre': 'Coach',
+                        'rol': 'coach'
+                    });
+                    print('✅ Usuario coach creado: coach/coach123 (rol: coach)');
+                } else {
+                    // Verificar si el coach tiene rol y nombre correctos
+                    final coach = usuariosCoach.first;
+                    bool necesitaActualizar = false;
+                    if (coach['rol'] != 'coach') {
+                        necesitaActualizar = true;
+                    }
+                    if (coach['nombre'] != 'Coach') {
+                        necesitaActualizar = true;
+                    }
+                    if (necesitaActualizar) {
+                        await db.update('usuario', {'rol': 'coach', 'nombre': 'Coach'}, where: 'username = ?', whereArgs: ['coach']);
+                        print('✅ Rol y nombre de coach actualizados');
+                    } else {
+                        print('ℹ️ Usuario coach ya existe con datos correctos');
+                    }
+                }
+            } else {
+                print('⚠️ No se puede crear usuario coach: columna rol no existe aún');
+            }
+        } catch (e) {
+            print('❌ Error al crear usuarios por defecto: $e');
+            rethrow;
         }
     }
 
     // Método público para asegurar que el usuario por defecto existe
     Future<void> asegurarUsuarioPorDefecto() async {
-        Database db = await database;
-        await _crearUsuarioPorDefecto(db);
+        try {
+            Database db = await database;
+            // Migrar usuarios viewer existentes a coach
+            final usuariosViewer = await db.query('usuario', where: 'username = ?', whereArgs: ['viewer']);
+            if (usuariosViewer.isNotEmpty) {
+                try {
+                    await db.update('usuario', {'rol': 'coach', 'username': 'coach', 'nombre': 'Coach'}, where: 'username = ?', whereArgs: ['viewer']);
+                    print('✅ Usuario viewer migrado a coach');
+                } catch (e) {
+                    print('⚠️ Error al migrar viewer a coach: $e');
+                }
+            }
+            await _crearUsuarioPorDefecto(db);
+            print('✅ Usuarios por defecto verificados');
+        } catch (e) {
+            print('❌ Error al asegurar usuarios por defecto: $e');
+        }
+    }
+    
+    // Método para crear manualmente el usuario coach (útil para debugging)
+    Future<bool> crearUsuarioCoachManual() async {
+        try {
+            Database db = await database;
+            
+            // Verificar si existe la columna rol
+            final tableInfo = await db.rawQuery('PRAGMA table_info(usuario)');
+            final tieneRol = tableInfo.any((column) => column['name'] == 'rol');
+            
+            if (!tieneRol) {
+                print('❌ No se puede crear coach: columna rol no existe');
+                // Intentar agregar la columna rol si no existe
+                try {
+                    await db.execute('ALTER TABLE usuario ADD COLUMN rol TEXT DEFAULT \'admin\'');
+                    print('✅ Columna rol agregada');
+                } catch (e) {
+                    print('❌ Error al agregar columna rol: $e');
+                    return false;
+                }
+            }
+            
+            // Verificar si el coach ya existe
+            final usuariosCoach = await db.query('usuario', where: 'username = ?', whereArgs: ['coach']);
+            if (usuariosCoach.isNotEmpty) {
+                print('ℹ️ Usuario coach ya existe');
+                final coachExistente = usuariosCoach.first;
+                print('   Username: ${coachExistente['username']}');
+                print('   Password: ${coachExistente['password']}');
+                print('   Nombre: ${coachExistente['nombre']}');
+                print('   Rol: ${coachExistente['rol'] ?? 'null'}');
+                
+                // Actualizar rol, nombre y password por si acaso
+                final actualizado = await db.update(
+                    'usuario', 
+                    {
+                        'rol': 'coach', 
+                        'nombre': 'Coach',
+                        'password': 'coach123' // Asegurar que la contraseña sea correcta
+                    }, 
+                    where: 'username = ?', 
+                    whereArgs: ['coach']
+                );
+                
+                if (actualizado > 0) {
+                    print('✅ Usuario coach actualizado correctamente');
+                }
+                
+                // Verificar que se actualizó correctamente
+                final coachVerificado = await db.query('usuario', where: 'username = ?', whereArgs: ['coach']);
+                if (coachVerificado.isNotEmpty) {
+                    final verificado = coachVerificado.first;
+                    print('✅ Verificación: username=${verificado['username']}, password=${verificado['password']}, rol=${verificado['rol']}');
+                }
+                
+                return true;
+            }
+            
+            // Crear usuario coach
+            final idInsertado = await db.insert('usuario', {
+                'username': 'coach',
+                'password': 'coach123',
+                'nombre': 'Coach',
+                'rol': 'coach'
+            });
+            
+            print('✅ Usuario coach creado manualmente: coach/coach123 (rol: coach, id: $idInsertado)');
+            
+            // Verificar que se creó correctamente
+            final coachVerificado = await db.query('usuario', where: 'id = ?', whereArgs: [idInsertado]);
+            if (coachVerificado.isNotEmpty) {
+                final verificado = coachVerificado.first;
+                print('✅ Verificación: username=${verificado['username']}, password=${verificado['password']}, rol=${verificado['rol']}');
+            }
+            
+            return true;
+        } catch (e, stackTrace) {
+            print('❌ Error al crear usuario coach manualmente: $e');
+            print('📋 Stack trace: $stackTrace');
+            return false;
+        }
     }
 
     // Métodos para manejo de usuarios
     Future<Map<String, dynamic>?> autenticarUsuario(String username, String password) async {
-        Database db = await instance.database;
-        
-        // Verificar si el usuario existe
-        final usuarios = await db.query(
-            'usuario',
-            where: 'username = ?',
-            whereArgs: [username],
-        );
-        
-        if (usuarios.isEmpty) {
-            print('❌ Usuario no encontrado: $username');
+        try {
+            Database db = await instance.database;
+            
+            // Limpiar espacios en blanco
+            final usernameLimpio = username.trim();
+            final passwordLimpio = password.trim();
+            
+            print('🔍 Intentando autenticar usuario: $usernameLimpio');
+            
+            // Verificar si el usuario existe
+            final usuarios = await db.query(
+                'usuario',
+                where: 'username = ?',
+                whereArgs: [usernameLimpio],
+            );
+            
+            if (usuarios.isEmpty) {
+                print('❌ Usuario no encontrado: $usernameLimpio');
+                // Listar todos los usuarios para debug
+                await _listarUsuariosParaDebug();
+                return null;
+            }
+            
+            final usuarioEncontrado = usuarios.first;
+            print('📋 Usuario encontrado: ${usuarioEncontrado['username']}');
+            print('🔑 Contraseña almacenada: ${usuarioEncontrado['password']}');
+            print('🔑 Contraseña ingresada: $passwordLimpio');
+            print('🎭 Rol: ${usuarioEncontrado['rol'] ?? 'null'}');
+            
+            // Verificar contraseña (comparación exacta)
+            if (usuarioEncontrado['password'] == passwordLimpio) {
+                final rol = usuarioEncontrado['rol'] ?? 'admin';
+                print('✅ Autenticación exitosa para: $usernameLimpio (rol: $rol)');
+                
+                // Asegurar que el rol existe en el resultado
+                if (usuarioEncontrado['rol'] == null || usuarioEncontrado['rol'].toString().isEmpty) {
+                    usuarioEncontrado['rol'] = 'admin';
+                    print('⚠️ Usuario sin rol, asignando admin por defecto');
+                }
+                
+                return usuarioEncontrado;
+            } else {
+                print('❌ Contraseña incorrecta para: $usernameLimpio');
+                print('   Esperada: ${usuarioEncontrado['password']}');
+                print('   Recibida: $passwordLimpio');
+                return null;
+            }
+        } catch (e) {
+            print('❌ Error en autenticación: $e');
             return null;
         }
-        
-        // Verificar contraseña
-        final usuariosConPassword = await db.query(
-            'usuario',
-            where: 'username = ? AND password = ?',
-            whereArgs: [username, password],
-        );
-        
-        if (usuariosConPassword.isNotEmpty) {
-            print('✅ Autenticación exitosa para: $username');
-            return usuariosConPassword.first;
-        } else {
-            print('❌ Contraseña incorrecta para: $username');
-            return null;
+    }
+    
+    // Método de debug para listar usuarios
+    Future<void> _listarUsuariosParaDebug() async {
+        try {
+            Database db = await database;
+            final usuarios = await db.query('usuario');
+            print('📊 Usuarios en la base de datos:');
+            for (var usuario in usuarios) {
+                print('   - Username: ${usuario['username']}, Nombre: ${usuario['nombre']}, Rol: ${usuario['rol'] ?? 'null'}');
+            }
+        } catch (e) {
+            print('❌ Error al listar usuarios: $e');
         }
     }
 
@@ -395,6 +620,75 @@ class DatabaseHelper {
             }).length;
         } catch (e) {
             return 0;
+        }
+    }
+
+    // Obtener ingresos de los últimos 6 meses para gráfico
+    Future<List<Map<String, dynamic>>> getIngresosUltimosMeses(int meses) async {
+        try {
+            final ahora = DateTime.now();
+            final List<Map<String, dynamic>> datos = [];
+            
+            // Nombres de meses en español
+            final nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
+                                  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            
+            for (int i = meses - 1; i >= 0; i--) {
+                final fecha = DateTime(ahora.year, ahora.month - i, 1);
+                final inicioMes = DateTime(fecha.year, fecha.month, 1);
+                final finMes = DateTime(fecha.year, fecha.month + 1, 0, 23, 59, 59);
+                
+                final pagos = await getPagosPorFecha(inicioMes, finMes);
+                double total = 0.0;
+                for (var pago in pagos) {
+                    total += pago.monto;
+                }
+                
+                datos.add({
+                    'mes': fecha.month,
+                    'anio': fecha.year,
+                    'ingresos': total,
+                    'label': nombresMeses[fecha.month - 1], // Nombre del mes en español
+                });
+            }
+            
+            return datos;
+        } catch (e) {
+            print('Error al obtener ingresos de los últimos meses: $e');
+            return [];
+        }
+    }
+
+    // Obtener distribución de estado de cuotas para gráfico
+    Future<Map<String, int>> getDistribucionEstadoCuotas() async {
+        try {
+            final socios = await getSocios();
+            final ahora = DateTime.now();
+            
+            int alDia = 0;
+            int porVencer = 0;
+            int vencidas = 0;
+            
+            for (var socio in socios) {
+                final dias = socio.fechaVencimiento.difference(ahora).inDays;
+                
+                if (dias < 0) {
+                    vencidas++;
+                } else if (dias <= 7) {
+                    porVencer++;
+                } else {
+                    alDia++;
+                }
+            }
+            
+            return {
+                'alDia': alDia,
+                'porVencer': porVencer,
+                'vencidas': vencidas,
+            };
+        } catch (e) {
+            print('Error al obtener distribución de estado de cuotas: $e');
+            return {'alDia': 0, 'porVencer': 0, 'vencidas': 0};
         }
     }
 

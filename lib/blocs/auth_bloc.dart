@@ -26,11 +26,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('username', usuario['username']);
         await prefs.setString('nombre', usuario['nombre']);
+        await prefs.setString('rol', usuario['rol'] ?? 'admin');
         await prefs.setBool('isLoggedIn', true);
 
         emit(AuthAuthenticatedState(
           usuario['username'],
           usuario['nombre'],
+          usuario['rol'] ?? 'admin',
         ));
       } else {
         emit(AuthErrorState('Usuario o contraseña incorrectos'));
@@ -53,7 +55,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (isLoggedIn) {
       final username = prefs.getString('username') ?? '';
       final nombre = prefs.getString('nombre') ?? '';
-      emit(AuthAuthenticatedState(username, nombre));
+      final rol = prefs.getString('rol') ?? 'admin';
+      emit(AuthAuthenticatedState(username, nombre, rol));
     } else {
       emit(AuthUnauthenticatedState());
     }
