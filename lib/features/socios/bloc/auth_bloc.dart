@@ -22,15 +22,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       );
 
       if (usuario != null) {
+        // Normalizar campos y evitar nulls
+        final username = (usuario['dni'] ?? usuario['username'] ?? '').toString();
+        final nombre = (usuario['nombreCompleto'] ?? usuario['nombre'] ?? '').toString();
+
         // Guardar sesión
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('username', usuario['username']);
-        await prefs.setString('nombre', usuario['nombre']);
+        await prefs.setString('username', username);
+        await prefs.setString('nombre', nombre);
         await prefs.setBool('isLoggedIn', true);
 
         emit(AuthAuthenticatedState(
-          usuario['username'],
-          usuario['nombre'],
+          username,
+          nombre,
         ));
       } else {
         emit(AuthErrorState('Usuario o contraseña incorrectos'));

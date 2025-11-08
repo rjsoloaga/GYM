@@ -1,4 +1,3 @@
-
 //Definimos la clase, nuestro modelo para crear los objetos 'Socio'
 class Socio {
     final int? id;
@@ -72,7 +71,7 @@ class Socio {
 
     //Metodo para convertir un socio a un Map(Diccionario)
     Map<String, dynamic> toMap() {
-      final map = {
+      return {
         'id': id,
         'nombreCompleto': nombreCompleto,
         'dni': dni,
@@ -82,26 +81,22 @@ class Socio {
         'fechaVencimiento': fechaVencimiento.toIso8601String(),
         'precioMensual': precioMensual,
         'tipoPlan': tipoPlan,
+        // 'activo' lo maneja la BD o incluir si lo tienes en el modelo
       };
-      // Si el id es nulo, lo removemos del mapa para que la base de datos lo autogenere.
-      if (id == null) {
-        map.remove('id');
-      }
-      return map;
     }
 
-    //Metodo para crear un Socio a partir de un Map (de la base de datos)
+    // Factory para crear Socio desde Map (útil al leer de la BD)
     factory Socio.fromMap(Map<String, dynamic> map) {
-        return Socio(
-            id: map['id'],
-            nombreCompleto: map['nombreCompleto'] ?? '',
-            dni: map['dni'] ?? '',
-            telefono: map['telefono'] ?? '',
-            email: map['email'] ?? '',
-            fechaInicio: DateTime.parse(map['fechaInicio'] as String),//Convertimos el String de la BD de vuelta a DateTime
-            fechaVencimiento: DateTime.parse(map['fechaVencimiento'] as String),
-            precioMensual: (map['precioMensual'] as num?)?.toDouble() ?? 0.0,
-            tipoPlan: map['tipoPlan'] ?? '',
-          );
+      return Socio(
+        id: map['id'] as int?,
+        nombreCompleto: map['nombreCompleto'] as String? ?? '',
+        dni: map['dni'] as String? ?? '',
+        telefono: map['telefono'] as String? ?? '',
+        email: map['email'] as String? ?? '',
+        fechaInicio: DateTime.parse(map['fechaInicio'] as String),
+        fechaVencimiento: DateTime.parse(map['fechaVencimiento'] as String),
+        precioMensual: (map['precioMensual'] as num?)?.toDouble() ?? 0.0,
+        tipoPlan: map['tipoPlan'] as String? ?? '',
+      );
     }
 }

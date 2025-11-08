@@ -76,12 +76,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Color.fromRGBO(255,255,255,0.15),
                           width: 3,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Color.fromRGBO(0,0,0,0.5),
                             blurRadius: 25,
                           ),
                         ],
@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             0, 0, 0, 1, 0,
                           ]),
                           child: Image.asset(
-                            'lobo.png',
+                            'assets/images/lobo.png',
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -111,7 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Color.fromRGBO(0,0,0,0.5),
                             blurRadius: 20,
                           ),
                         ],
