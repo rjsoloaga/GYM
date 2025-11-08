@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart'; // PAra la DB
 import 'package:path/path.dart'; // Para unir rutas de directorios
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:gym/models/socio.dart';
 import 'package:gym/models/pago.dart';
 
@@ -272,26 +273,39 @@ class DatabaseHelper {
                 }
             }
             
-            // Verificar si el coach ya existe
-            final usuariosCoach = await db.query('usuario', where: 'username = ?', whereArgs: ['coach']);
-            if (usuariosCoach.isNotEmpty) {
-                print('ℹ️ Usuario coach ya existe');
-                final coachExistente = usuariosCoach.first;
+            // Verificar si el coach ya existe (búsqueda case-insensitive)
+            final todosLosUsuarios = await db.query('usuario');
+            Map<String, dynamic>? coachExistente;
+            int? idCoach;
+            
+            for (var usuario in todosLosUsuarios) {
+                final username = (usuario['username'] ?? '').toString().toLowerCase();
+                if (username == 'coach' || username == 'viewer') {
+                    coachExistente = usuario;
+                    idCoach = usuario['id'] as int?;
+                    break;
+                }
+            }
+            
+            if (coachExistente != null && idCoach != null) {
+                print('ℹ️ Usuario coach/viewer ya existe');
+                print('   ID: $idCoach');
                 print('   Username: ${coachExistente['username']}');
                 print('   Password: ${coachExistente['password']}');
                 print('   Nombre: ${coachExistente['nombre']}');
                 print('   Rol: ${coachExistente['rol'] ?? 'null'}');
                 
-                // Actualizar rol, nombre y password por si acaso
+                // Actualizar rol, nombre, username y password
                 final actualizado = await db.update(
                     'usuario', 
                     {
+                        'username': 'coach', // Normalizar username a minúsculas
                         'rol': 'coach', 
                         'nombre': 'Coach',
                         'password': 'coach123' // Asegurar que la contraseña sea correcta
                     }, 
-                    where: 'username = ?', 
-                    whereArgs: ['coach']
+                    where: 'id = ?', 
+                    whereArgs: [idCoach]
                 );
                 
                 if (actualizado > 0) {
@@ -299,10 +313,10 @@ class DatabaseHelper {
                 }
                 
                 // Verificar que se actualizó correctamente
-                final coachVerificado = await db.query('usuario', where: 'username = ?', whereArgs: ['coach']);
+                final coachVerificado = await db.query('usuario', where: 'id = ?', whereArgs: [idCoach]);
                 if (coachVerificado.isNotEmpty) {
                     final verificado = coachVerificado.first;
-                    print('✅ Verificación: username=${verificado['username']}, password=${verificado['password']}, rol=${verificado['rol']}');
+                    print('✅ Verificación: username=${verificado['username']}, password=${verificado['password']}, rol=${verificado['rol']}, nombre=${verificado['nombre']}');
                 }
                 
                 return true;
@@ -339,38 +353,66 @@ class DatabaseHelper {
             Database db = await instance.database;
             
             // Limpiar espacios en blanco
-            final usernameLimpio = username.trim();
+            final usernameLimpio = username.trim().toLowerCase(); // Normalizar a minúsculas
             final passwordLimpio = password.trim();
             
-            print('🔍 Intentando autenticar usuario: $usernameLimpio');
+            print('🔍 Intentando autenticar usuario: "$usernameLimpio"');
+            print('🔑 Contraseña recibida (longitud: ${passwordLimpio.length}): "$passwordLimpio"');
             
-            // Verificar si el usuario existe
-            final usuarios = await db.query(
-                'usuario',
-                where: 'username = ?',
-                whereArgs: [usernameLimpio],
-            );
+            // Verificar si el usuario existe (buscar tanto en minúsculas como original)
+            final usuarios = await db.query('usuario');
             
-            if (usuarios.isEmpty) {
+            // Buscar usuario (comparación case-insensitive)
+            Map<String, dynamic>? usuarioEncontrado;
+            for (var usuario in usuarios) {
+                final usernameDB = (usuario['username'] ?? '').toString().toLowerCase();
+                if (usernameDB == usernameLimpio) {
+                    usuarioEncontrado = usuario;
+                    break;
+                }
+            }
+            
+            if (usuarioEncontrado == null) {
                 print('❌ Usuario no encontrado: $usernameLimpio');
                 // Listar todos los usuarios para debug
                 await _listarUsuariosParaDebug();
-                return null;
+                
+                // Intentar crear el usuario coach si no existe
+                if (usernameLimpio == 'coach') {
+                    print('⚠️ Intentando crear usuario coach...');
+                    await crearUsuarioCoachManual();
+                    // Intentar autenticar nuevamente
+                    final usuariosReintento = await db.query('usuario');
+                    for (var usuario in usuariosReintento) {
+                        final usernameDB = (usuario['username'] ?? '').toString().toLowerCase();
+                        if (usernameDB == usernameLimpio) {
+                            usuarioEncontrado = usuario;
+                            print('✅ Usuario coach creado, reintentando autenticación...');
+                            break;
+                        }
+                    }
+                }
+                
+                if (usuarioEncontrado == null) {
+                    return null;
+                }
             }
             
-            final usuarioEncontrado = usuarios.first;
             print('📋 Usuario encontrado: ${usuarioEncontrado['username']}');
-            print('🔑 Contraseña almacenada: ${usuarioEncontrado['password']}');
-            print('🔑 Contraseña ingresada: $passwordLimpio');
+            print('🔑 Contraseña almacenada (longitud: ${(usuarioEncontrado['password'] ?? '').toString().length}): "${usuarioEncontrado['password']}"');
+            print('🔑 Contraseña ingresada (longitud: ${passwordLimpio.length}): "$passwordLimpio"');
             print('🎭 Rol: ${usuarioEncontrado['rol'] ?? 'null'}');
+            print('🎭 Nombre: ${usuarioEncontrado['nombre'] ?? 'null'}');
             
             // Verificar contraseña (comparación exacta)
-            if (usuarioEncontrado['password'] == passwordLimpio) {
-                final rol = usuarioEncontrado['rol'] ?? 'admin';
+            final passwordDB = (usuarioEncontrado['password'] ?? '').toString().trim();
+            
+            if (passwordDB == passwordLimpio) {
+                final rol = (usuarioEncontrado['rol'] ?? 'admin').toString();
                 print('✅ Autenticación exitosa para: $usernameLimpio (rol: $rol)');
                 
                 // Asegurar que el rol existe en el resultado
-                if (usuarioEncontrado['rol'] == null || usuarioEncontrado['rol'].toString().isEmpty) {
+                if (rol.isEmpty || rol == 'null') {
                     usuarioEncontrado['rol'] = 'admin';
                     print('⚠️ Usuario sin rol, asignando admin por defecto');
                 }
@@ -378,12 +420,48 @@ class DatabaseHelper {
                 return usuarioEncontrado;
             } else {
                 print('❌ Contraseña incorrecta para: $usernameLimpio');
-                print('   Esperada: ${usuarioEncontrado['password']}');
-                print('   Recibida: $passwordLimpio');
+                print('   Esperada: "$passwordDB" (longitud: ${passwordDB.length})');
+                print('   Recibida: "$passwordLimpio" (longitud: ${passwordLimpio.length})');
+                print('   Coinciden: ${passwordDB == passwordLimpio}');
+                
+                // Si es coach y la contraseña es incorrecta, intentar actualizar
+                if (usernameLimpio == 'coach') {
+                    print('⚠️ Intentando actualizar contraseña del coach...');
+                    try {
+                        // Buscar el ID del usuario coach
+                        final idCoach = usuarioEncontrado['id'];
+                        if (idCoach != null) {
+                            await db.update(
+                                'usuario',
+                                {
+                                    'password': 'coach123',
+                                    'rol': 'coach',
+                                    'nombre': 'Coach'
+                                },
+                                where: 'id = ?',
+                                whereArgs: [idCoach]
+                            );
+                            print('✅ Contraseña del coach actualizada a "coach123"');
+                            // Reintentar autenticación
+                            if (passwordLimpio == 'coach123') {
+                                usuarioEncontrado['password'] = 'coach123';
+                                usuarioEncontrado['rol'] = 'coach';
+                                usuarioEncontrado['nombre'] = 'Coach';
+                                // final rol = (usuarioEncontrado['rol'] ?? 'coach').toString();
+                                print('✅ Autenticación exitosa después de actualizar contraseña');
+                                return usuarioEncontrado;
+                            }
+                        }
+                    } catch (e) {
+                        print('❌ Error al actualizar contraseña: $e');
+                    }
+                }
+                
                 return null;
             }
-        } catch (e) {
+        } catch (e, stackTrace) {
             print('❌ Error en autenticación: $e');
+            print('📋 Stack trace: $stackTrace');
             return null;
         }
     }
@@ -659,6 +737,37 @@ class DatabaseHelper {
         }
     }
 
+    // Obtener ingresos de los últimos días para gráfico
+    Future<List<Map<String, dynamic>>> getIngresosUltimosDias(int dias) async {
+        try {
+            final ahora = DateTime.now();
+            final List<Map<String, dynamic>> datos = [];
+            
+            for (int i = dias - 1; i >= 0; i--) {
+                final fecha = ahora.subtract(Duration(days: i));
+                final inicioDia = DateTime(fecha.year, fecha.month, fecha.day, 0, 0, 0);
+                final finDia = DateTime(fecha.year, fecha.month, fecha.day, 23, 59, 59);
+                
+                final pagos = await getPagosPorFecha(inicioDia, finDia);
+                double total = 0.0;
+                for (var pago in pagos) {
+                    total += pago.monto;
+                }
+                
+                datos.add({
+                    'fecha': fecha,
+                    'ingresos': total,
+                    'label': '${fecha.day}/${fecha.month}', // Formato día/mes
+                });
+            }
+            
+            return datos;
+        } catch (e) {
+            print('Error al obtener ingresos de los últimos días: $e');
+            return [];
+        }
+    }
+
     // Obtener distribución de estado de cuotas para gráfico
     Future<Map<String, int>> getDistribucionEstadoCuotas() async {
         try {
@@ -693,8 +802,15 @@ class DatabaseHelper {
     }
 
     // Método para crear socios ficticios de prueba
+    // SOLO para desarrollo/testing - NO se ejecuta en producción (release mode)
     Future<void> crearSociosFicticios() async {
         try {
+            // Verificación adicional: solo crear en modo debug
+            if (!kDebugMode) {
+                print('ℹ️ Modo release: Los socios ficticios no se crearán en producción.');
+                return;
+            }
+            
             final sociosExistentes = await getSocios();
             if (sociosExistentes.isNotEmpty) {
                 print('ℹ️ Ya existen ${sociosExistentes.length} socios en la base de datos. No se crearán socios ficticios.');

@@ -27,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context.read<AuthBloc>().add(
             LoginEvent(
               _usernameController.text.trim(),
-              _passwordController.text,
+              _passwordController.text.trim(), // Aplicar trim también a la contraseña
             ),
           );
     }

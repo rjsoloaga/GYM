@@ -4,7 +4,7 @@ import 'package:gym/pages/login_screen.dart';
 import 'package:gym/pages/main_navigation_screen.dart';
 import 'package:gym/pages/selection_screen.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'package:sqflite/sqflite.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'repositories/database_helper.dart';
@@ -39,8 +39,11 @@ Future<void> main() async {
     // Asegurar que el usuario coach existe (forzar creación si no existe)
     await DatabaseHelper.instance.crearUsuarioCoachManual();
     
-    // Crear socios ficticios si la base de datos está vacía
-    await DatabaseHelper.instance.crearSociosFicticios();
+    // Crear socios ficticios SOLO en modo debug (para desarrollo/testing)
+    // En modo release (producción), NO se crearán socios ficticios
+    if (kDebugMode) {
+      await DatabaseHelper.instance.crearSociosFicticios();
+    }
   } catch (e) {
     print('❌ Error al inicializar base de datos: $e');
   }
