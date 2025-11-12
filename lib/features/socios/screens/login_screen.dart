@@ -3,227 +3,123 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym/features/socios/bloc/auth_bloc.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
-
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  _LoginScreenState createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+  final _dniController = TextEditingController();
+  final _telefonoController = TextEditingController();
+  final _dniFocusNode = FocusNode();
+  final _telefonoFocusNode = FocusNode();
+  bool _isLoading = false;
+
+  /*
+  @override
+  void initState() {
+    super.initState();
+    
+    // Precargar solo para desarrollo (opcional, quitar después)
+    if (!const bool.fromEnvironment('dart.vm.product')) {
+      _dniController.text = 'admin';
+      _telefonoController.text = 'admin';
+    }
+  }
+  */
 
   @override
   void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
+    _dniController.dispose();
+    _telefonoController.dispose();
+    _dniFocusNode.dispose();
+    _telefonoFocusNode.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
-    if (_formKey.currentState!.validate()) {
-      context.read<AuthBloc>().add(
-            LoginEvent(
-              _usernameController.text.trim(),
-              _passwordController.text,
-            ),
-          );
+  void _login() {
+    if (_dniController.text.isEmpty || _telefonoController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ingrese DNI y teléfono')),
+      );
+      return;
     }
+
+    setState(() => _isLoading = true);
+    
+    context.read<AuthBloc>().add(
+      LoginEvent(
+        dni: _dniController.text.trim(),
+        telefono: _telefonoController.text.trim(),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
-          if (state is AuthErrorState) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error),
-                backgroundColor: const Color(0xFFCF6679),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          } else if (state is AuthAuthenticatedState) {
-            Navigator.of(context).pushReplacementNamed('/main');
-          }
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF0D1B2A), // Azul muy oscuro
-                const Color(0xFF1B263B), // Azul oscuro
-                const Color(0xFF415A77), // Azul medio oscuro
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo/Icono
-                    Container(
-                      width: 240,
-                      height: 240,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Color.fromRGBO(255,255,255,0.15),
-                          width: 3,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color.fromRGBO(0,0,0,0.5),
-                            blurRadius: 25,
-                          ),
-                        ],
-                      ),
-                      child: ClipOval(
-                        child: ColorFiltered(
-                          colorFilter: const ColorFilter.matrix([
-                            1.25, 0, 0, 0, 20,
-                            0, 1.25, 0, 0, 20,
-                            0, 0, 1.25, 0, 20,
-                            0, 0, 0, 1, 0,
-                          ]),
-                          child: Image.asset(
-                            'assets/images/lobo.png',
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 50),
-
-                    // Formulario de login
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E1E),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color.fromRGBO(0,0,0,0.5),
-                            blurRadius: 20,
-                          ),
-                        ],
-                        border: Border.all(
-                          color: const Color(0xFF3A3A3A),
-                          width: 1,
-                        ),
-                      ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // Campo Usuario
-                            TextFormField(
-                              controller: _usernameController,
-                              decoration: InputDecoration(
-                                labelText: 'Usuario',
-                                prefixIcon: const Icon(Icons.person),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                filled: true,
-                                fillColor: const Color(0xFF2C2C2C),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Por favor ingresa tu usuario';
-                                }
-                                return null;
-                              },
-                              textInputAction: TextInputAction.next,
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Campo Contraseña
-                            TextFormField(
-                              controller: _passwordController,
-                              obscureText: _obscurePassword,
-                              decoration: InputDecoration(
-                                labelText: 'Contraseña',
-                                prefixIcon: const Icon(Icons.lock),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility
-                                        : Icons.visibility_off,
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscurePassword = !_obscurePassword;
-                                    });
-                                  },
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                filled: true,
-                                fillColor: const Color(0xFF2C2C2C),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Por favor ingresa tu contraseña';
-                                }
-                                return null;
-                              },
-                              textInputAction: TextInputAction.done,
-                              onFieldSubmitted: (_) => _handleLogin(),
-                            ),
-                            const SizedBox(height: 30),
-
-                            // Botón de Login
-                            BlocBuilder<AuthBloc, AuthState>(
-                              builder: (context, state) {
-                                if (state is AuthLoadingState) {
-                                  return const SizedBox(
-                                    height: 50,
-                                    child: Center(
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  );
-                                }
-
-                                return ElevatedButton(
-                                  onPressed: _handleLogin,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2196F3),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    elevation: 3,
-                                  ),
-                                  child: const Text(
-                                    'Iniciar Sesión',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+    return BlocListener<AuthBloc, dynamic>(
+      listener: (context, state) {
+        setState(() => _isLoading = false);
+        
+        if (state is AuthErrorState) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.error)),
+          );
+        }
+      },
+      child: Scaffold(
+        body: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.fitness_center, size: 80, color: Colors.blue),
+              SizedBox(height: 20),
+              Text('GYM MANAGER', 
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+              SizedBox(height: 40),
+              
+              // Campo DNI
+              TextField(
+                controller: _dniController,
+                focusNode: _dniFocusNode,
+                decoration: InputDecoration(
+                  labelText: 'DNI',
+                  border: OutlineInputBorder(),
                 ),
+                textInputAction: TextInputAction.next,
+                onSubmitted: (_) {
+                  // Navegar al campo de teléfono
+                  FocusScope.of(context).requestFocus(_telefonoFocusNode);
+                },
               ),
-            ),
+              SizedBox(height: 20),
+              
+              // Campo Teléfono
+              TextField(
+                controller: _telefonoController,
+                focusNode: _telefonoFocusNode,
+                decoration: InputDecoration(
+                  labelText: 'Teléfono',
+                  border: OutlineInputBorder(),
+                ),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _login(),
+                obscureText: false, // Cambiar a true si quieres ocultarlo
+              ),
+              SizedBox(height: 30),
+              
+              // Botón Login
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: _isLoading
+                    ? Center(child: CircularProgressIndicator())
+                    : ElevatedButton(
+                        onPressed: _login,
+                        child: Text('INGRESAR', style: TextStyle(fontSize: 16)),
+                      ),
+              ),
+            ],
           ),
         ),
       ),

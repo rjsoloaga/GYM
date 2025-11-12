@@ -29,6 +29,8 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     super.initState();
     if (widget.socioParaEditar != null) {
       _cargarDatosExistente();
+    } else {
+      _tipoPlan = 'Mensual'; // ← Valor por defecto para nuevos socios
     }
   }
 
@@ -58,17 +60,28 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
       return;
     }
 
-    final socio = Socio(
-      id: widget.socioParaEditar?.id,
-      nombreCompleto: nombre,
-      dni: dni,
-      telefono: _telefonoController.text.trim(),
-      email: _emailController.text.trim(),
-      fechaInicio: _fechaInicio,
-      fechaVencimiento: _fechaVencimiento,
-      precioMensual: double.tryParse(_precioController.text) ?? 0.0,
-      tipoPlan: _tipoPlan,
-    );
+    final socio = widget.socioParaEditar == null
+        ? Socio(
+            id: null,
+            nombreCompleto: nombre,
+            dni: dni,
+            telefono: _telefonoController.text.trim(),
+            email: _emailController.text.trim(),
+            fechaInicio: _fechaInicio,
+            fechaVencimiento: _fechaVencimiento,
+            precioMensual: double.tryParse(_precioController.text) ?? 0.0,
+            tipoPlan: _tipoPlan,
+          )
+        : widget.socioParaEditar!.copyWith(
+            nombreCompleto: nombre,
+            dni: dni,
+            telefono: _telefonoController.text.trim(),
+            email: _emailController.text.trim(),
+            fechaInicio: _fechaInicio,
+            fechaVencimiento: _fechaVencimiento,
+            precioMensual: double.tryParse(_precioController.text) ?? 0.0,
+            tipoPlan: _tipoPlan,
+          );
 
     debugPrint('debug: socio final a guardar - ID: ${socio.id}');
 
@@ -217,7 +230,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                 filled: true,
                 fillColor: Colors.white,
               ),
-              items: ['Mensual', 'Trimestral', 'Anual']
+              items: ['Pendiente', 'Mensual', 'Trimestral', 'Anual'] 
                   .map((plan) => DropdownMenuItem(
                         value: plan,
                         child: Text(plan),

@@ -2,72 +2,103 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gym/features/socios/models/socio.dart';
+import 'package:gym/features/auth/models/usuario.dart'; // NUEVO
 
 class DatabaseHelper {
-  //Constructor privado (parte del patron Singleton)
   DatabaseHelper._privateConstructor();
-
-  //Instancia estatica unica
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
-
-  //Referencia a la base de datos
   static Database? _database;
 
-  //Getter para la base de datos (si no existe, la crea)
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
   }
 
-  //Metodo para inicializar la base de datos
   Future<Database> _initDatabase() async {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, 'gym_database.db');
 
-    // Incrementa version si haces migraciones futuras
+    // ⚠️ INCREMENTA LA VERSIÓN para crear nuevas tablas
     return await openDatabase(
       path,
-      version: 1,
+      version: 3, // CAMBIADO de 2 a 3
       onCreate: (db, version) async {
-        // Se crea la tabla al instalar por primera vez
+        // Crear tabla de usuarios primero
+        await db.execute(_createUsuariosTableSql);
+        // Crear tabla de socios
         await db.execute(_createSociosTableSql);
 
         // Seed de admin para login de desarrollo
-        await db.insert('socios', {
-          'nombreCompleto': 'Admin Test',
-          'dni': 'admin',
-          'telefono': 'admin',
-          'email': 'admin@example.com',
-          'fechaInicio': DateTime.now().toIso8601String(),
-          'fechaVencimiento': DateTime.now().add(const Duration(days: 365)).toIso8601String(),
-          'precioMensual': 0.0,
-          'tipoPlan': 'Admin',
-          'activo': 1,
-        });
+        await _crearUsuarioAdmin(db);
       },
       onOpen: (db) async {
-        // Asegura la tabla si por alguna razón falta en DB previa
+        // Asegurar tablas si faltan
+        await db.execute(_createUsuariosTableIfNotExistsSql);
         await db.execute(_createSociosTableIfNotExistsSql);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        // migraciones futuras
+        // Migración desde versión 2 a 3
+        if (oldVersion == 2) {
+          // Crear tabla de usuarios
+          await db.execute(_createUsuariosTableSql);
+          // Migrar admin de socios a usuarios
+          await _migrarAdminDesdeSocios(db);
+          // Agregar nuevas columnas a socios
+          await db.execute('ALTER TABLE socios ADD COLUMN pendienteAprobacion INTEGER DEFAULT 0');
+          await db.execute('ALTER TABLE socios ADD COLUMN fechaRegistroTelegram TEXT');
+          await db.execute('ALTER TABLE socios ADD COLUMN usuarioId INTEGER');
+        }
       },
     );
   }
 
+  // NUEVO: SQL para tabla de usuarios
+  static const String _createUsuariosTableSql = '''
+    CREATE TABLE usuarios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombreCompleto TEXT NOT NULL,
+      email TEXT NOT NULL,
+      telefono TEXT NOT NULL,
+      dni TEXT NOT NULL UNIQUE,
+      rol TEXT NOT NULL,
+      fechaCreacion TEXT NOT NULL,
+      activo INTEGER DEFAULT 1,
+      telegramChatId TEXT
+    )
+  ''';
+
+  static const String _createUsuariosTableIfNotExistsSql = '''
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombreCompleto TEXT NOT NULL,
+      email TEXT NOT NULL,
+      telefono TEXT NOT NULL,
+      dni TEXT NOT NULL UNIQUE,
+      rol TEXT NOT NULL,
+      fechaCreacion TEXT NOT NULL,
+      activo INTEGER DEFAULT 1,
+      telegramChatId TEXT
+    )
+  ''';
+
+  // SQL actualizado para socios
   static const String _createSociosTableSql = '''
     CREATE TABLE socios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nombreCompleto TEXT NOT NULL,
-      dni TEXT NOT NULL UNIQUE,
-      telefono TEXT NOT NULL,
+      dni TEXT NOT NULL,
+      telefono TEXT NOT NULL, 
       email TEXT NOT NULL,
       fechaInicio TEXT NOT NULL,
       fechaVencimiento TEXT NOT NULL,
       precioMensual REAL NOT NULL,
       tipoPlan TEXT NOT NULL,
-      activo INTEGER NOT NULL DEFAULT 1
+      telegramChatId TEXT,
+      pendienteAprobacion INTEGER DEFAULT 0,
+      fechaRegistroTelegram TEXT,
+      usuarioId INTEGER,
+      activo INTEGER DEFAULT 1
     )
   ''';
 
@@ -82,85 +113,162 @@ class DatabaseHelper {
       fechaVencimiento TEXT NOT NULL,
       precioMensual REAL NOT NULL,
       tipoPlan TEXT NOT NULL,
+      telegramChatId TEXT,
+      pendienteAprobacion INTEGER DEFAULT 0,
+      fechaRegistroTelegram TEXT,
+      usuarioId INTEGER,
       activo INTEGER NOT NULL DEFAULT 1
     )
   ''';
 
-  // --- Metodos CRUD (Create, Read, Update, Delete) ---
-
-  //CREATE inserta un nuevo socio
-  Future<int> insertarSocio(Socio socio) async {
-      Database db = await instance.database; // Obtenemos la referencia de la DB
-
-      // Insertamos el socio convertido a Map y obtenemos su ID automatico
-      return await db.insert('socios', socio.toMap());
+  // NUEVO: Crear usuario admin
+  static Future<void> _crearUsuarioAdmin(Database db) async {
+    await db.insert('usuarios', {
+      'nombreCompleto': 'Administrador',
+      'email': 'admin@gym.com',
+      'telefono': '0000000000',
+      'dni': 'admin',
+      'rol': 'admin',
+      'fechaCreacion': DateTime.now().toIso8601String(),
+      'activo': 1,
+      'telegramChatId': null,
+    });
   }
 
-  //READ - obtener todos los socios
-  Future<List<Socio>> getSocios() async {
-      Database db = await instance.database;
-      // Obtenemos una lista de Maps (cada Map representa una fila de la DB)
-      final List<Map<String, dynamic>> maps = await db.query('socios');
-      // Convertimos cada Map en una lista de un objeto Socio usando .fromMap()
-      return List.generate(maps.length, (i) {
-          return Socio.fromMap(maps[i]);
+  // NUEVO: Migrar admin desde tabla socios
+  static Future<void> _migrarAdminDesdeSocios(Database db) async {
+    // Buscar el admin en socios
+    final adminSocios = await db.query(
+      'socios',
+      where: 'dni = ?',
+      whereArgs: ['admin'],
+    );
+
+    if (adminSocios.isNotEmpty) {
+      // Crear usuario admin
+      await db.insert('usuarios', {
+        'nombreCompleto': 'Administrador',
+        'email': 'admin@gym.com',
+        'telefono': '0000000000',
+        'dni': 'admin',
+        'rol': 'admin',
+        'fechaCreacion': DateTime.now().toIso8601String(),
+        'activo': 1,
+        'telegramChatId': null,
       });
+    }
   }
 
-  //UPDATE - actualizar un socio existente
-  Future<int> updateSocio(Socio socio) async {
-      debugPrint(' DB: Actualizando Socio ID: ${socio.id}');
-      Database db = await instance.database;
-      // Actualizamos la fila donde el ID coincida
-      return await db.update(
-          'socios',
-          socio.toMap(), // Los nuevos datos
-          where: 'id = ?', // La condicion es donde la columna 'id' sea igual a...
-          whereArgs: [socio.id], // ...el valor de socio.id
-      );
+  // --- MÉTODOS PARA USUARIOS (NUEVOS) ---
+
+  // CREATE usuario
+  Future<int> insertarUsuario(Usuario usuario) async {
+    Database db = await instance.database;
+    return await db.insert('usuarios', usuario.toMap());
   }
 
-  // DELETE - Eliminar un socio
-  Future<int> deleteSocio(int id) async {
-      Database db = await instance.database;
-      return await db.delete(
-          'socios',
-          where: 'id = ?',
-          whereArgs: [id],
-      );
+  // READ - obtener todos los usuarios
+  Future<List<Usuario>> getUsuarios() async {
+    Database db = await instance.database;
+    final List<Map<String, dynamic>> maps = await db.query('usuarios');
+    return List.generate(maps.length, (i) => Usuario.fromMap(maps[i]));
   }
 
-  // Métodos para autenticación (necesarios para auth_bloc)
-  // Autenticación: devuelve el Map del socio si coincide dni+telefono y activo=1
+  // READ - obtener usuario por ID
+  Future<Usuario?> getUsuario(int id) async {
+    Database db = await instance.database;
+    final maps = await db.query(
+      'usuarios',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (maps.isNotEmpty) {
+      return Usuario.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  // UPDATE - actualizar usuario
+  Future<int> updateUsuario(Usuario usuario) async {
+    Database db = await instance.database;
+    return await db.update(
+      'usuarios',
+      usuario.toMap(),
+      where: 'id = ?',
+      whereArgs: [usuario.id],
+    );
+  }
+
+  // Autenticación con usuarios
   Future<Map<String, dynamic>?> autenticarUsuario(String dni, String telefono) async {
     final db = await database;
     final result = await db.query(
-      'socios',
+      'usuarios', // CAMBIADO: ahora usa tabla usuarios
       where: 'dni = ? AND telefono = ? AND activo = 1',
       whereArgs: [dni, telefono],
     );
 
     if (result.isNotEmpty) {
-      // Saneamos el row para evitar nulls que causen TypeError en la UI/Bloc
       final row = Map<String, dynamic>.from(result.first);
 
       row['nombreCompleto'] = row['nombreCompleto']?.toString() ?? '';
       row['dni'] = row['dni']?.toString() ?? '';
       row['telefono'] = row['telefono']?.toString() ?? '';
       row['email'] = row['email']?.toString() ?? '';
-      row['fechaInicio'] = row['fechaInicio']?.toString() ?? DateTime.fromMillisecondsSinceEpoch(0).toIso8601String();
-      row['fechaVencimiento'] = row['fechaVencimiento']?.toString() ?? DateTime.fromMillisecondsSinceEpoch(0).toIso8601String();
-      row['precioMensual'] = (row['precioMensual'] is num) ? (row['precioMensual'] as num).toDouble() : double.tryParse(row['precioMensual']?.toString() ?? '') ?? 0.0;
-      row['tipoPlan'] = row['tipoPlan']?.toString() ?? '';
-      row['activo'] = (row['activo'] is int) ? row['activo'] as int : int.tryParse(row['activo']?.toString() ?? '1') ?? 1;
+      row['rol'] = row['rol']?.toString() ?? 'socio';
+      row['fechaCreacion'] = row['fechaCreacion']?.toString() ?? DateTime.now().toIso8601String();
+      row['telegramChatId'] = row['telegramChatId']?.toString();
+      row['activo'] = (row['activo'] is int) ? row['activo'] as int : 1;
 
-      debugPrint('autenticarUsuario: row saneada => $row');
+      debugPrint('autenticarUsuario: usuario encontrado => $row');
       return row;
     }
     return null;
   }
 
-  // Métodos para dashboard (necesarios para dashboard_screen)
+  // --- MÉTODOS PARA SOCIOS (ACTUALIZADOS) ---
+
+  Future<int> insertarSocio(Socio socio) async {
+    Database db = await instance.database;
+    return await db.insert('socios', socio.toMap());
+  }
+
+  Future<List<Socio>> getSocios() async {
+    Database db = await instance.database;
+    final List<Map<String, dynamic>> maps = await db.query('socios');
+    return List.generate(maps.length, (i) => Socio.fromMap(maps[i]));
+  }
+
+  // Obtener socios pendientes de aprobación
+  Future<List<Socio>> getSociosPendientes() async {
+    Database db = await instance.database;
+    final maps = await db.query(
+      'socios',
+      where: 'pendienteAprobacion = ?',
+      whereArgs: [1],
+    );
+    return List.generate(maps.length, (i) => Socio.fromMap(maps[i]));
+  }
+
+  Future<int> updateSocio(Socio socio) async {
+    Database db = await instance.database;
+    return await db.update(
+      'socios',
+      socio.toMap(),
+      where: 'id = ?',
+      whereArgs: [socio.id],
+    );
+  }
+
+  Future<int> deleteSocio(int id) async {
+    Database db = await instance.database;
+    return await db.delete(
+      'socios',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<double> getIngresosMensuales() async {
     final db = await database;
     final now = DateTime.now();
@@ -203,28 +311,13 @@ class DatabaseHelper {
     return (result.first['count'] as num?)?.toInt() ?? 0;
   }
 
-  // Método de ayuda para debug: devuelve todas las filas crudas de la tabla socios
-  Future<List<Map<String, dynamic>>> getAllRawSocios() async {
-    final db = await database;
-    return await db.query('socios');
-  }
-
-  // Método de ayuda para debug: imprime en logs el contenido de socios
-  Future<void> debugPrintAllSocios() async {
-    final rows = await getAllRawSocios();
-    debugPrint('--- Contenido tabla socios: ${rows.length} filas ---');
-    for (var r in rows) {
-      debugPrint(r.toString());
-    }
-  }
-
-  /// Borra el archivo de base de datos usado por la app (solo para desarrollo).
-  Future<void> dropDatabase() async {
-    final databasesPath = await getDatabasesPath();
-    final path = join(databasesPath, 'gym_database.db');
-    await deleteDatabase(path);
-    debugPrint('Database deleted: $path');
-    _database = null;
+  Future<int> deleteUsuario(int id) async {
+    Database db = await instance.database;
+    return await db.delete(
+      'usuarios',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
 }

@@ -4,10 +4,12 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sqflite/sqflite.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'dart:async'; // AGREGAR ESTE IMPORT
 
 // Tus imports
 import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/bloc/socios_bloc.dart';
+import 'package:gym/features/socios/screens/emergency_reset_screen.dart';
 
 // Autenticación de tu compañera
 import 'package:gym/features/socios/bloc/auth_bloc.dart';
@@ -15,9 +17,26 @@ import 'package:gym/features/socios/screens/login_screen.dart';
 import 'package:gym/features/socios/screens/auth_wrapper.dart';
 import 'package:gym/features/socios/screens/main_navigation_screen.dart';
 
+// NUEVO: Import para gestión de usuarios y aprobación
+import 'package:gym/features/auth/screens/gestion_usuarios_screen.dart';
+import 'package:gym/features/socios/screens/aprobacion_socios_screen.dart';
+
+// AGREGAR ESTE IMPORT PARA TELEGRAM
+import 'package:gym/features/notificaciones/services/telegram_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // DIAGNÓSTICO: Capturar errores específicos de DropdownButton
+  FlutterError.onError = (details) {
+    final exception = details.exception.toString();
+    if (exception.contains("DropdownButton") && exception.contains("Pendiente")) {
+      debugPrint("🚨 ERROR DROPDOWN DETECTADO:");
+      debugPrint("Exception: $exception");
+      debugPrint("Stack: ${details.stack}");
+    }
+    FlutterError.presentError(details);
+  };
   
   if (kIsWeb) {
     databaseFactory = databaseFactoryFfiWeb;
@@ -27,6 +46,21 @@ Future<void> main() async {
   await initializeDateFormatting('es_ES', null);
   
   runApp(const MyApp());
+  
+  // INICIAR VERIFICACIÓN AUTOMÁTICA
+  startTelegramAutoCheck();
+}
+
+void startTelegramAutoCheck() {
+  // Verificar nuevos mensajes cada 5 minutos
+  Timer.periodic(Duration(seconds: 5), (timer) async {
+    try {
+      await TelegramService.getUpdates();
+      print('✅ Verificación automática de Telegram completada');
+    } catch (e) {
+      print('❌ Error en verificación automática: $e');
+    }
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -37,7 +71,7 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (context) => AuthBloc()..add(CheckAuthEvent()),
+          create: (context) => AuthBloc(),
         ),
         BlocProvider(
           create: (context) => SociosBloc(DatabaseHelper.instance)..add(CargarSociosEvent()),
@@ -66,10 +100,12 @@ class MyApp extends StatelessWidget {
             foregroundColor: Colors.white,
           ),
         ),
-        home: const AuthWrapper(),
+        home: const AuthWrapper(),//home: const EmergencyResetScreen(), // TEMPORAL//
         routes: {
-          '/login': (context) => const LoginScreen(),
+          '/login': (context) => LoginScreen(),
           '/main': (context) => const MainNavigationScreen(),
+          '/gestion-usuarios': (context) => GestionUsuariosScreen(),
+          '/aprobacion-socios': (context) => AprobacionSociosScreen(),
         },
       ),
     );

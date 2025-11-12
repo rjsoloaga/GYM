@@ -1,0 +1,8 @@
+flutter_native_splash:
+  color: "#ffffff"
+  image: assets/images/lobo.png
+  android: true
+  ios: true
+  android_12:
+    image: assets/images/lobo.png
+    icon_background_color: "#ffffff"

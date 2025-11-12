@@ -5,6 +5,7 @@
 *.swp
 .history
 
+
 # Archivos de configuración de IDEs
 # Comenta la siguiente línea si quieres compartir la configuración de VS Code
 .vscode/
@@ -53,3 +54,4 @@ app.*.map.json
 .dart_tool/
 .packages
 .pub-cache/
+.esquemaProyecto

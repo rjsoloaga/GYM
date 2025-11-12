@@ -22,12 +22,12 @@ class SocioCard extends StatelessWidget {
   // Método para obtener el color según el estado de la cuota
   Color _getColorByEstado() {
     switch (socio.estadoCuota) {
-      case 'Verde':
-        return Colors.green;
-      case 'Ambar':
-        return Colors.orange;
-      case 'Rojo':
+      case 'Vencido':
         return Colors.red;
+      case 'Por Vencer':
+        return Colors.orange;
+      case 'Al Día':  // ← DEBE COINCIDIR CON EL MODELO
+        return Colors.green;
       default:
         return Colors.grey;
     }
@@ -36,12 +36,12 @@ class SocioCard extends StatelessWidget {
   // Método para obtener el icono según el estado
   IconData _getIconByEstado() {
     switch (socio.estadoCuota) {
-      case 'Verde':
-        return Icons.check_circle;
-      case 'Ambar':
-        return Icons.warning;
-      case 'Rojo':
+      case 'Vencido':
         return Icons.error;
+      case 'Por Vencer':
+        return Icons.warning;
+      case 'Al Día':  // ← DEBE COINCIDIR CON EL MODELO
+        return Icons.check_circle;
       default:
         return Icons.help;
     }
@@ -112,6 +112,9 @@ class SocioCard extends StatelessWidget {
               _buildInfoRow('Teléfono:', socio.telefono),
               _buildInfoRow('Email:', socio.email),
               
+              const SizedBox(height: 4),
+              _buildTelegramStatus(socio),
+              
               const SizedBox(height: 8),
               
               // Fechas
@@ -163,9 +166,9 @@ class SocioCard extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: onNotificar,
+                    onPressed: onNotificar, // ← ESTE BOTÓN DEBE FUNCIONAR
                     icon: const Icon(Icons.notifications, size: 18),
-                    label: const Text('Enviar Recordatorio'),
+                    label: const Text('Recordatorio de Cuota'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.orange,
                       side: const BorderSide(color: Colors.orange),
@@ -182,7 +185,7 @@ class SocioCard extends StatelessWidget {
                   child: ElevatedButton.icon(
                     onPressed: onPagarCuota,
                     icon: const Icon(Icons.payment, size: 18),
-                    label: const Text('Pagar Cuota'),
+                    label: const Text('Cobrar Cuota'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
@@ -285,14 +288,29 @@ class SocioCard extends StatelessWidget {
       ],
     );
   }
+
+  Widget _buildTelegramStatus(Socio socio) {
+    // VERDADERO estado - basado en si puede recibir mensajes
+    final bool puedeRecibirMensajes = socio.telegramChatId != null && 
+                                    socio.telegramChatId!.isNotEmpty && 
+                                    socio.telegramChatId != 'temp_${socio.id}';
+    
+    return Row(
+      children: [
+        Icon(
+          puedeRecibirMensajes ? Icons.telegram : Icons.telegram_outlined,
+          color: puedeRecibirMensajes ? Colors.blue : Colors.grey,
+          size: 16,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          puedeRecibirMensajes ? 'Conectado a Telegram' : 'No registrado en Telegram',
+          style: TextStyle(
+            color: puedeRecibirMensajes ? Colors.blue : Colors.grey,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
 }
-
-
-//Características implementadas:
-//✅ Borde izquierdo colorizado según estado de cuota
-//✅ Icono y texto del estado (Verde/Ámbar/Rojo)
-//✅ Información completa del socio (DNI, teléfono, email)
-//✅ Fechas formateadas (inicio y vencimiento)
-//✅ Chip del plan y precio mensual
-//✅ Botones de acción (Editar, Eliminar)
-//✅ Espacio preparado para botón "Cobrar Cuota" (futuro)
