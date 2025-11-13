@@ -2,8 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gym/features/socios/models/socio.dart';
-import 'package:gym/features/auth/models/usuario.dart';
-import 'package:gym/features/planes/models/plan.dart'; // Importar el modelo Plan
+import 'package:gym/features/auth/models/usuario.dart'; // NUEVO
 
 class DatabaseHelper {
   DatabaseHelper._privateConstructor();
@@ -16,33 +15,6 @@ class DatabaseHelper {
     return _database!;
   }
 
-  // SQL para tabla de planes
-  static const String _createPlanesTableSql = '''
-    CREATE TABLE planes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre TEXT NOT NULL,
-      precio REAL NOT NULL,
-      duracionDias INTEGER,
-      tiempoIndeterminado INTEGER DEFAULT 0,
-      activo INTEGER DEFAULT 1,
-      fechaCreacion TEXT NOT NULL,
-      fechaActualizacion TEXT NOT NULL
-    )
-  ''';
-
-  static const String _createPlanesTableIfNotExistsSql = '''
-    CREATE TABLE IF NOT EXISTS planes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre TEXT NOT NULL,
-      precio REAL NOT NULL,
-      duracionDias INTEGER,
-      tiempoIndeterminado INTEGER DEFAULT 0,
-      activo INTEGER DEFAULT 1,
-      fechaCreacion TEXT NOT NULL,
-      fechaActualizacion TEXT NOT NULL
-    )
-  ''';
-
   Future<Database> _initDatabase() async {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, 'gym_database.db');
@@ -50,7 +22,7 @@ class DatabaseHelper {
     // ⚠️ INCREMENTA LA VERSIÓN para crear nuevas tablas
     return await openDatabase(
       path,
-      version: 9, // Incrementado a 9 para agregar tiempoIndeterminado a planes
+      version: 5, // CAMBIADO de 4 a 5
       onCreate: (db, version) async {
         // Crear tabla de usuarios primero
         await db.execute(_createUsuariosTableSql);
@@ -58,20 +30,15 @@ class DatabaseHelper {
         await db.execute(_createSociosTableSql);
         // Crear tabla de pagos
         await db.execute(_createPagosTableSql);
-        // Crear tabla de planes
-        await db.execute(_createPlanesTableSql);
 
         // Seed de admin para login de desarrollo
         await _crearUsuarioAdmin(db);
-        // Crear planes por defecto
-        await _crearPlanesPorDefecto(db);
       },
       onOpen: (db) async {
         // Asegurar tablas si faltan
         await db.execute(_createUsuariosTableIfNotExistsSql);
         await db.execute(_createSociosTableIfNotExistsSql);
         await db.execute(_createPagosTableIfNotExistsSql);
-        await db.execute(_createPlanesTableIfNotExistsSql);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         // Migración desde versión 2 a 3
@@ -94,107 +61,6 @@ class DatabaseHelper {
         if (oldVersion == 4) {
           // Agregar usuarioId a tabla de pagos
           await db.execute('ALTER TABLE pagos ADD COLUMN usuarioId INTEGER');
-          oldVersion = 5; // Actualizar oldVersion para la siguiente migración
-        }
-        
-        // Migración a la versión 6 - Añadir tabla de planes
-        if (oldVersion == 5) {
-          await db.execute(_createPlanesTableSql);
-        }
-        
-        // Migración a la versión 9 - Añadir tiempoIndeterminado a planes
-        if (oldVersion <= 8) {
-          try {
-            // Verificar si la columna ya existe
-            final result = await db.rawQuery(
-              'PRAGMA table_info(planes)'
-            );
-            
-            final hasTiempoIndeterminado = result.any((col) => 
-              col['name'] == 'tiempoIndeterminado');
-              
-            if (!hasTiempoIndeterminado) {
-              await db.execute('''
-                ALTER TABLE planes 
-                ADD COLUMN tiempoIndeterminado INTEGER DEFAULT 0
-              ''');
-              
-              // Actualizar duracionDias para que sea NULLABLE
-              // SQLite no soporta MODIFY COLUMN directamente, así que hay que recrear la tabla
-              await db.execute('''
-                CREATE TABLE planes_new (
-                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  nombre TEXT NOT NULL,
-                  precio REAL NOT NULL,
-                  duracionDias INTEGER,
-                  tiempoIndeterminado INTEGER DEFAULT 0,
-                  activo INTEGER DEFAULT 1,
-                  fechaCreacion TEXT NOT NULL,
-                  fechaActualizacion TEXT NOT NULL
-                )
-              ''');
-              
-              // Copiar datos existentes
-              await db.execute('''
-                INSERT INTO planes_new 
-                (id, nombre, precio, duracionDias, activo, fechaCreacion, fechaActualizacion)
-                SELECT id, nombre, precio, duracionDias, activo, fechaCreacion, fechaActualizacion 
-                FROM planes
-              ''');
-              
-              // Eliminar la tabla antigua y renombrar la nueva
-              await db.execute('DROP TABLE planes');
-              await db.execute('ALTER TABLE planes_new RENAME TO planes');
-            }
-          } catch (e) {
-            debugPrint('Error durante la migración a la versión 9: $e');
-            // Si hay un error, intentar crear la tabla desde cero
-            try {
-              await db.execute('DROP TABLE IF EXISTS planes');
-              await db.execute(_createPlanesTableSql);
-            } catch (e) {
-              debugPrint('Error al recrear la tabla planes: $e');
-            }
-          }
-          await _crearPlanesPorDefecto(db);
-          oldVersion = 6; // Actualizar oldVersion para la siguiente migración
-        }
-
-        // Migración a la versión 7 - Añadir fechaActualizacion a planes
-        if (oldVersion == 6) {
-          try {
-            await db.execute('ALTER TABLE planes ADD COLUMN fechaActualizacion TEXT');
-            // Actualizar los registros existentes con la fecha actual
-            await db.rawUpdate(
-              'UPDATE planes SET fechaActualizacion = ?',
-              [DateTime.now().toIso8601String()],
-            );
-            oldVersion = 7; // Actualizar oldVersion para la siguiente migración
-          } catch (e) {
-            if (!e.toString().contains('duplicate column name: fechaActualizacion')) {
-              rethrow;
-            }
-            oldVersion = 7; // Asegurarse de que la versión se actualice incluso si la columna ya existe
-          }
-        }
-
-        // Migración a la versión 8 - Añadir planId a socios
-        if (oldVersion == 7) {
-          try {
-            // Verificar si la columna ya existe
-            final result = await db.rawQuery('PRAGMA table_info(socios)');
-            final hasPlanId = result.any((column) => column['name'] == 'planId');
-            
-            if (!hasPlanId) {
-              await db.execute('ALTER TABLE socios ADD COLUMN planId INTEGER');
-              print('✅ Columna planId añadida a la tabla socios');
-            } else {
-              print('ℹ️ La columna planId ya existe en la tabla socios');
-            }
-          } catch (e) {
-            print('❌ Error al agregar planId a socios: $e');
-            // Continuar con la migración incluso si hay un error
-          }
         }
       },
     );
@@ -245,9 +111,7 @@ class DatabaseHelper {
       pendienteAprobacion INTEGER DEFAULT 0,
       fechaRegistroTelegram TEXT,
       usuarioId INTEGER,
-      planId INTEGER,
-      activo INTEGER DEFAULT 1,
-      FOREIGN KEY (planId) REFERENCES planes (id)
+      activo INTEGER DEFAULT 1
     )
   ''';
 
@@ -266,9 +130,7 @@ class DatabaseHelper {
       pendienteAprobacion INTEGER DEFAULT 0,
       fechaRegistroTelegram TEXT,
       usuarioId INTEGER,
-      planId INTEGER,
-      activo INTEGER NOT NULL DEFAULT 1,
-      FOREIGN KEY (planId) REFERENCES planes (id)
+      activo INTEGER NOT NULL DEFAULT 1
     )
   ''';
 
@@ -299,42 +161,7 @@ class DatabaseHelper {
     )
   ''';
 
-  // Crear planes por defecto
-  static Future<void> _crearPlanesPorDefecto(Database db) async {
-    final planes = [
-      Plan(
-        nombre: 'Mensual',
-        precio: 5000.0,
-        duracionDias: 30,
-        activo: true,
-      ),
-      Plan(
-        nombre: 'Trimestral',
-        precio: 13500.0, // 10% de descuento
-        duracionDias: 90,
-        activo: true,
-      ),
-      Plan(
-        nombre: 'Semestral',
-        precio: 24000.0, // 20% de descuento
-        duracionDias: 180,
-        activo: true,
-      ),
-    ];
-
-    for (var plan in planes) {
-      try {
-        await db.insert('planes', plan.toMap());
-      } catch (e) {
-        // Ignorar si ya existe
-        if (!e.toString().contains('UNIQUE constraint failed')) {
-          rethrow;
-        }
-      }
-    }
-  }
-
-  // Crear usuario admin
+  // NUEVO: Crear usuario admin
   static Future<void> _crearUsuarioAdmin(Database db) async {
     await db.insert('usuarios', {
       'nombreCompleto': 'Administrador',
@@ -372,75 +199,7 @@ class DatabaseHelper {
     }
   }
 
-  // --- MÉTODOS PARA PLANES ---
-
-  // Insertar un nuevo plan
-  Future<int> insertarPlan(Plan plan) async {
-    final db = await database;
-    // Asegurarse de que la fecha de actualización sea la actual
-    final planConFechas = plan.copyWith(
-      fechaCreacion: plan.fechaCreacion ?? DateTime.now(),
-      fechaActualizacion: DateTime.now(),
-    );
-    return await db.insert('planes', planConFechas.toMap());
-  }
-
-  // Obtener todos los planes
-  Future<List<Plan>> getPlanes({bool soloActivos = true}) async {
-    final db = await database;
-    final where = soloActivos ? 'WHERE activo = 1' : '';
-    final result = await db.rawQuery('SELECT * FROM planes $where ORDER BY nombre');
-    return result.map((map) => Plan.fromMap(map)).toList();
-  }
-
-  // Obtener un plan por ID
-  Future<Plan?> getPlan(int id) async {
-    final db = await database;
-    final result = await db.query('planes', where: 'id = ?', whereArgs: [id]);
-    return result.isNotEmpty ? Plan.fromMap(result.first) : null;
-  }
-  
-  // Obtener un socio por ID
-  Future<Socio?> getSocio(int id) async {
-    final db = await database;
-    final result = await db.query('socios', where: 'id = ?', whereArgs: [id]);
-    return result.isNotEmpty ? Socio.fromMap(result.first) : null;
-  }
-
-  // Actualizar un plan existente
-  Future<int> actualizarPlan(Plan plan) async {
-    final db = await database;
-    // Actualizar la fecha de actualización al momento de actualizar
-    final planActualizado = plan.copyWith(fechaActualizacion: DateTime.now());
-    return await db.update(
-      'planes',
-      planActualizado.toMap(),
-      where: 'id = ?',
-      whereArgs: [plan.id],
-    );
-  }
-
-  // Desactivar un plan (borrado lógico)
-  Future<int> desactivarPlan(int id) async {
-    final db = await database;
-    return await db.rawUpdate(
-      'UPDATE planes SET activo = 0 WHERE id = ?',
-      [id],
-    );
-  }
-
-  // Obtener planes para mostrar en formularios
-  Future<List<Map<String, dynamic>>> getPlanesParaFormulario() async {
-    final planes = await getPlanes(soloActivos: true);
-    return planes.map((plan) => {
-      'id': plan.id,
-      'nombre': '${plan.nombre} - \$${plan.precio.toStringAsFixed(2)}',
-      'precio': plan.precio,
-      'duracionDias': plan.duracionDias,
-    }).toList();
-  }
-
-  // --- MÉTODOS PARA USUARIOS ---
+  // --- MÉTODOS PARA USUARIOS (NUEVOS) ---
 
   // CREATE usuario
   Future<int> insertarUsuario(Usuario usuario) async {
@@ -539,17 +298,6 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [socio.id],
     );
-  }
-
-  // Obtener socios por plan
-  Future<List<Socio>> getSociosPorPlan(int planId) async {
-    final db = await database;
-    final result = await db.query(
-      'socios',
-      where: 'planId = ?',
-      whereArgs: [planId],
-    );
-    return result.map((map) => Socio.fromMap(map)).toList();
   }
 
   Future<int> deleteSocio(int id) async {

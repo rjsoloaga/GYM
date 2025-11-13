@@ -2,8 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/models/socio.dart';
-import 'package:gym/features/planes/models/plan.dart';
-import 'package:gym/features/planes/services/plan_service.dart';
 
 class TelegramService {
   static const String _botToken = '8597219422:AAEvMJE6tE8-3RnUHSq3MVZvsErLN7_Dw5E';
@@ -161,55 +159,14 @@ class TelegramService {
         else if (pasoActual == 'esperando_email') {
           final email = text.trim();
           if (_esEmailValido(email)) {
-            _registrosPendientes[userId] = {
-              ...registroPendiente,
-              'email': email,
-              'paso': 'esperando_plan',
-              'fechaConsultaPlanes': DateTime.now().toIso8601String(),
-              'timestamp': DateTime.now().millisecondsSinceEpoch,
-            };
-            final fechaConsultaPrevia = registroPendiente['fechaConsultaPlanes'] != null 
-                ? DateTime.parse(registroPendiente['fechaConsultaPlanes']) 
-                : null;
-            await _solicitarPlan(chatId, fechaConsultaPrevia: fechaConsultaPrevia);
+            final nombreCompleto = registroPendiente['nombreCompleto'];
+            final telefono = registroPendiente['telefono'];
+            final dni = registroPendiente['dni'];
+            await _completarRegistro(userId, chatId, nombreCompleto, telefono, dni, email);
           } else {
             await sendMessage(
               chatId: chatId,
               message: '❌ Email inválido. Ejemplo: nombre@email.com',
-            );
-          }
-        }
-        else if (pasoActual == 'esperando_plan') {
-          final planes = await DatabaseHelper.instance.getPlanes(soloActivos: true);
-          final opcion = int.tryParse(text.trim());
-          
-          // Obtener planes actualizados para asegurar que tenemos los precios más recientes
-          final planService = PlanService();
-          final planesActualizados = await planService.obtenerPlanesActivos();
-          
-          if (opcion != null && opcion >= 1 && opcion <= planesActualizados.length) {
-            final planSeleccionado = planesActualizados[opcion - 1];
-            final nombreCompleto = registroPendiente['nombreCompleto'];
-            final telefono = registroPendiente['telefono'];
-            final dni = registroPendiente['dni'];
-            final email = registroPendiente['email'];
-            
-            await _completarRegistro(
-              userId, 
-              chatId, 
-              nombreCompleto, 
-              telefono, 
-              dni, 
-              email,
-              planId: planSeleccionado.id,
-              planNombre: planSeleccionado.nombre,
-              planPrecio: planSeleccionado.precio,
-              duracionDias: planSeleccionado.duracionDias ?? 30, // Valor por defecto de 30 días
-            );
-          } else {
-            await sendMessage(
-              chatId: chatId,
-              message: '❌ Opción inválida. Por favor, selecciona un número de la lista.',
             );
           }
         }
@@ -271,82 +228,7 @@ Ahora envía tu email:
     );
   }
 
-  static Future<void> _solicitarPlan(String chatId, {DateTime? fechaConsultaPrevia}) async {
-    try {
-      final planService = PlanService();
-      
-      // Verificar si hay cambios en los planes desde la última consulta
-      if (fechaConsultaPrevia != null) {
-        final hayCambios = await planService.hanCambiadoLosPlanes(fechaConsultaPrevia);
-        if (hayCambios) {
-          await sendMessage(
-            chatId: chatId,
-            message: 'ℹ️ *¡Atención!* Los planes han sido actualizados recientemente. Aquí tienes la información más reciente:',
-          );
-        }
-      }
-
-      // Obtener planes con información de actualización
-      final ahora = DateTime.now();
-      final planesConEstado = await planService.getPlanesConEstadoActualizacion(fechaConsultaPrevia);
-      
-      if (planesConEstado.isEmpty) {
-        await sendMessage(
-          chatId: chatId,
-          message: '⚠️ No hay planes disponibles. Contacta al administrador.',
-        );
-        return;
-      }
-
-      final buffer = StringBuffer('''
-✅ *Email recibido*\n\nSelecciona tu plan de entrenamiento:\n\n''');
-
-      for (var i = 0; i < planesConEstado.length; i++) {
-        final item = planesConEstado[i];
-        final plan = item['plan'] as Plan;
-        final haCambiado = item['haCambiado'] as bool;
-        
-        buffer.write('${i + 1}. *${plan.nombre}* - \$${plan.precio.toStringAsFixed(2)} (${plan.duracionDias} días)');
-        
-        if (haCambiado) {
-          buffer.write(' 🔄');
-        }
-        
-        buffer.write('\n');
-      }
-      
-      // Agregar información de actualización
-      if (fechaConsultaPrevia != null) {
-        buffer.write('\n*Última actualización:* ${ahora.toString().substring(0, 16)}\n');
-      }
-      
-      buffer.write('\n_Selecciona el número correspondiente al plan que deseas contratar._');
-
-      await sendMessage(
-        chatId: chatId,
-        message: buffer.toString(),
-      );
-    } catch (e) {
-      print('❌ Error en _solicitarPlan: $e');
-      await sendMessage(
-        chatId: chatId,
-        message: '❌ Error al cargar los planes. Por favor, inténtalo de nuevo más tarde.',
-      );
-    }
-  }
-
-  static Future<void> _completarRegistro(
-    String userId, 
-    String chatId, 
-    String nombreCompleto, 
-    String telefono, 
-    String dni, 
-    String email, {
-    int? planId,
-    String planNombre = 'Mensual',
-    double planPrecio = 5000.0,
-    int duracionDias = 30,
-  }) async {
+  static Future<void> _completarRegistro(String userId, String chatId, String nombreCompleto, String telefono, String dni, String email) async {
     try {
       print('═══════════════════════════════════════════════');
       print('📝 COMPLETANDO REGISTRO DE TELEGRAM');
@@ -389,34 +271,19 @@ ahora recibirás recordatorios de pago.
           ''',
         );
       } else {
-        final ahora = DateTime.now();
         final nuevoSocio = Socio(
           nombreCompleto: nombreCompleto,
           dni: dni,
           telefono: telefono,
           email: email,
-          fechaInicio: ahora,
-          fechaVencimiento: ahora.add(Duration(days: duracionDias)),
-          precioMensual: planPrecio,
-          tipoPlan: planNombre,
+          fechaInicio: DateTime.now(),
+          fechaVencimiento: DateTime.now().add(Duration(days: 30)),
+          precioMensual: 5000.0,
+          tipoPlan: 'Pendiente',
           telegramChatId: chatId,
           pendienteAprobacion: true,
-          fechaRegistroTelegram: ahora,
-          planId: planId,
+          fechaRegistroTelegram: DateTime.now(),
         );
-        
-        // Registrar también el pago inicial
-        try {
-          await DatabaseHelper.instance.insertarPago(
-            nuevoSocio.id!,
-            planPrecio,
-            ahora,
-            'Efectivo',
-            usuarioId: 1, // ID del usuario administrador por defecto
-          );
-        } catch (e) {
-          print('⚠️ No se pudo registrar el pago inicial: $e');
-        }
 
         await DatabaseHelper.instance.insertarSocio(nuevoSocio);
         print('✅ Nuevo socio creado con ChatID: $chatId');
@@ -430,8 +297,6 @@ ahora recibirás recordatorios de pago.
 📱 Teléfono: $telefono
 🆔 DNI: $dni
 📧 Email: $email
-💳 Plan: $planNombre (\$${planPrecio.toStringAsFixed(2)})
-📅 Vencimiento: ${DateTime.now().add(Duration(days: duracionDias)).toString().split(' ')[0]}
 
 *Estado:* Pendiente de aprobación
 🔔 Recibirás un mensaje cuando estés activo

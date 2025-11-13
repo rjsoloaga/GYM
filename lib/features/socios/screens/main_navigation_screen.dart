@@ -11,6 +11,7 @@ import 'package:gym/features/auth/screens/gestion_usuarios_screen.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import 'package:gym/features/dashboard/screens/admin_reportes_screen.dart';
 import 'package:gym/features/auth/models/usuario.dart';
+import 'package:gym/features/planes/screens/planes_list_screen.dart';
 
 
 class MainNavigationScreen extends StatefulWidget {
@@ -455,14 +456,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             }
 
             if (currentRole == 'admin') {
-              return ListTile(
-                leading: Icon(Icons.admin_panel_settings, color: Colors.red),
-                title: Text('Gestión de Usuarios'),
-                subtitle: Text('Roles y permisos'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/gestion-usuarios');
-                },
+              return Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.people_outline, color: Colors.white70),
+                    title: const Text('Gestionar Usuarios', style: TextStyle(color: Colors.white)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/gestion-usuarios');
+                    },
+                  ),
+                  const Divider(color: Colors.white24),
+                  ListTile(
+                    leading: const Icon(Icons.assignment, color: Colors.white70),
+                    title: const Text('Gestión de Planes', style: TextStyle(color: Colors.white)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const PlanesListScreen()),
+                      );
+                    },
+                  ),
+                ],
               );
             }
 

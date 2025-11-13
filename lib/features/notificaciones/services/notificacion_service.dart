@@ -3,9 +3,34 @@ import 'telegram_service.dart';
 import 'package:gym/features/notificaciones/services/plantilla_service.dart';
 import 'package:gym/features/notificaciones/models/plantilla_notificacion.dart';
 import 'package:gym/core/database/database_helper.dart';
+import 'dart:async';
 
 class NotificacionService {
-  static final List<Map<String, dynamic>> _historialNotificaciones = [];
+  // Stream para notificar cuando se acepta una solicitud
+  static final StreamController<Map<String, dynamic>> _solicitudesController = 
+      StreamController<Map<String, dynamic>>.broadcast();
+  
+  // Stream público para escuchar solicitudes aceptadas
+  static Stream<Map<String, dynamic>> get onSolicitudAceptada => _solicitudesController.stream;
+  
+  // Método para notificar cuando se aprueba un socio
+  static void notificarAprobacionSocio(Socio socio) {
+    if (!_solicitudesController.isClosed) {
+      _solicitudesController.add({
+        'tipo': 'socio_aprobado',
+        'socio': socio.toMap(),
+        'fecha': DateTime.now().toIso8601String(),
+      });
+    }
+  }
+  static List<Map<String, dynamic>> _historialNotificaciones = [];
+  
+  // Método para cerrar los controladores de flujo cuando ya no sean necesarios
+  static void dispose() {
+    if (!_solicitudesController.isClosed) {
+      _solicitudesController.close();
+    }
+  }
 
   static List<Socio> obtenerSociosParaNotificar(List<Socio> todosLosSocios) {
     return todosLosSocios.where((socio) => socio.necesitaNotificacion).toList();

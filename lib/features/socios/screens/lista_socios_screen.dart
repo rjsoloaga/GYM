@@ -14,6 +14,7 @@ import 'package:gym/features/notificaciones/models/plantilla_notificacion.dart';
 import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/payments/services/comprobante_service.dart';
 import 'package:gym/features/auth/models/usuario.dart';
+import 'dart:async';
 
 class ListaSociosScreen extends StatefulWidget {
   final String? initialFilter; // 'vencidos', 'por_vencer', 'todos', 'pagos_del_dia'
@@ -32,22 +33,46 @@ class ListaSociosScreen extends StatefulWidget {
 }
 
 class _ListaSociosScreenState extends State<ListaSociosScreen> {
+  late StreamSubscription<Map<String, dynamic>> _suscripcionNotificaciones;
 
   final _searchController = TextEditingController();
   late String _filtroActual;
 
-  void _editarSocio(BuildContext context, Socio socio) {
-    Navigator.push(
+  Future<void> _editarSocio(BuildContext context, Socio socio) async {
+    // El objeto 'socio' que llega por parámetro ya tiene la información necesaria.
+    // Navegamos a la pantalla de edición pasándole directamente este objeto.
+    final resultado = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AgregarSocioScreen(socioParaEditar: socio),
       ),
     );
+
+    // Si volvemos de la pantalla de edición y el resultado es 'true' (o cualquier otro indicador de éxito),
+    // recargamos la lista de socios para reflejar los cambios.
+    if (resultado == true && mounted) {
+      context.read<SociosBloc>().add(CargarSociosEvent());
+    }
   }
 
   @override
   void initState() {
     super.initState();
+    // Suscribirse a notificaciones de aprobación de socios
+    _suscripcionNotificaciones = NotificacionService.onSolicitudAceptada.listen((event) {
+      if (event['tipo'] == 'socio_aprobado' && mounted) {
+        // Recargar la lista de socios cuando se aprueba uno nuevo
+        context.read<SociosBloc>().add(CargarSociosEvent());
+        
+        // Mostrar un snackbar informativo
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Nuevo socio aprobado: ${event['socio']['nombreCompleto']}'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    });
     
     // Determinar el filtro inicial
     if (widget.filtroVencidos) {
@@ -66,6 +91,13 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
 
   void _recuperarChatIdsReales() async {
     await NotificacionService.recuperarChatIds();
+  }
+  
+  @override
+  void dispose() {
+    _suscripcionNotificaciones.cancel();
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _eliminarSocio(BuildContext context, Socio socio) {

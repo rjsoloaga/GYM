@@ -1,5 +1,6 @@
 import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/models/socio.dart';
+import 'package:gym/features/notificaciones/services/notificacion_service.dart';
 import 'telegram_service.dart';
 
 class ChatIdRegistroService {
@@ -218,17 +219,17 @@ Para recibir notificaciones por Telegram:
     // NUEVO: Aprobar socio pendiente
     static Future<bool> aprobarSocio(Socio socio) async {
     try {
+        // Mantener el plan y precio originales del socio
         final socioAprobado = socio.copyWith(
-        pendienteAprobacion: false,
-        tipoPlan: 'Básico', // Plan por defecto al aprobar
-        precioMensual: 5000.0, // Precio por defecto
+          pendienteAprobacion: false,
+          // No sobrescribir tipoPlan ni precioMensual para mantener los valores originales
         );
         
         await DatabaseHelper.instance.updateSocio(socioAprobado);
         
         // Notificar al socio por Telegram
         if (socio.telegramChatId != null) {
-        await TelegramService.sendMessage(
+          await TelegramService.sendMessage(
             chatId: socio.telegramChatId!,
             message: '''
     🎉 *¡Cuenta Aprobada!*
@@ -236,16 +237,19 @@ Para recibir notificaciones por Telegram:
     Hola ${socio.nombreCompleto}, tu cuenta ha sido aprobada.
 
     ✅ *Estado:* Activo
-    📅 *Plan:* Básico
-    💰 *Precio:* \$5,000 mensuales
+    📅 *Plan:* ${socio.tipoPlan}
+    💰 *Precio:* \$${socio.precioMensual?.toStringAsFixed(2) ?? '0.00'}
     📱 *Próximo pago:* ${socio.fechaVencimiento.day}/${socio.fechaVencimiento.month}/${socio.fechaVencimiento.year}
 
     ¡Bienvenido al gym!
 
     *Gym Manager*
             ''',
-        );
+          );
         }
+        
+        // Notificar a la aplicación sobre la aprobación
+        NotificacionService.notificarAprobacionSocio(socioAprobado);
         
         return true;
     } catch (e) {

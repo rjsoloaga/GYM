@@ -223,67 +223,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildMetricCard(String titulo, String valor, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-            spreadRadius: 0,
-          ),
-        ],
+    // Determinar el tamaño de fuente basado en la longitud del valor
+    double fontSize = 24.0;
+    if (valor.length > 8) {
+      fontSize = 20.0;
+    } else if (valor.length > 12) {
+      fontSize = 16.0;
+    }
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: 140,
+        maxHeight: 160,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const Spacer(),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            valor,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).textTheme.titleLarge?.color,
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            titulo,
-            style: TextStyle(
-              fontSize: 13,
-              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.8),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          if (titulo == 'Ingresos Diarios') ...[
-            const SizedBox(height: 6),
-            Text(
-              'Se reinicia a las 00:00',
-              style: TextStyle(
-                fontSize: 10,
-                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
-              ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.1)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
             ),
           ],
-        ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const Spacer(),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  valor,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.titleLarge?.color,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  titulo,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (titulo == 'Ingresos Diarios') ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Se reinicia a las 00:00',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

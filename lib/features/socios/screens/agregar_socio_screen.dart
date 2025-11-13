@@ -24,11 +24,18 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
   DateTime _fechaVencimiento = DateTime.now().add(const Duration(days: 30));
   String _tipoPlan = 'Mensual';
 
+  // Lista de opciones válidas para el tipo de plan
+  static const List<String> opcionesPlan = ['Pendiente', 'Básico', 'Mensual', 'Trimestral', 'Anual'];
+  
   @override
   void initState() {
     super.initState();
     if (widget.socioParaEditar != null) {
       _cargarDatosExistente();
+      // Asegurarse de que _tipoPlan sea un valor válido
+      if (!opcionesPlan.contains(_tipoPlan)) {
+        _tipoPlan = 'Mensual';
+      }
     } else {
       _tipoPlan = 'Mensual'; // ← Valor por defecto para nuevos socios
     }
@@ -233,25 +240,25 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              initialValue: _tipoPlan,
+              value: _tipoPlan,
               decoration: InputDecoration(
                 labelText: 'Tipo de Plan',
                 border: const OutlineInputBorder(),
                 filled: true,
                 fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.white,
               ),
-              // Añadimos 'Básico' entre las opciones porque algunos registros
-              // existentes pueden tener ese valor (migración/otros flujos).
-              items: ['Pendiente', 'Básico', 'Mensual', 'Trimestral', 'Anual'] 
-                  .map((plan) => DropdownMenuItem(
+              items: opcionesPlan
+                  .map<DropdownMenuItem<String>>((String plan) => DropdownMenuItem<String>(
                         value: plan,
                         child: Text(plan),
                       ))
                   .toList(),
-              onChanged: (value) {
-                setState(() {
-                  _tipoPlan = value!;
-                });
+              onChanged: (String? value) {
+                if (value != null && opcionesPlan.contains(value)) {
+                  setState(() {
+                    _tipoPlan = value;
+                  });
+                }
               },
             ),
             const SizedBox(height: 24),
