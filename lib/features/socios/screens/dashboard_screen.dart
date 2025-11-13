@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/models/socio.dart';
+import 'package:gym/features/socios/screens/lista_socios_screen.dart';
+import 'package:gym/features/dashboard/screens/resumen_ingresos_diarios_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -27,11 +29,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<Map<String, dynamic>> _obtenerEstadisticas() async {
     final socios = await DatabaseHelper.instance.getSocios();
-    final ingresosMensuales = await DatabaseHelper.instance.getIngresosMensuales();
+    final ahora = DateTime.now();
+    final ingresosDiarios = await DatabaseHelper.instance.getIngresosDiarios(ahora);
     final cuotasVencidas = await DatabaseHelper.instance.getCuotasVencidas();
     final cuotasPorVencer = await DatabaseHelper.instance.getCuotasPorVencer();
-
-    final ahora = DateTime.now();
     final sociosPorVencer = socios.where((socio) {
       final dias = socio.fechaVencimiento.difference(ahora).inDays;
       return dias >= 0 && dias <= 7;
@@ -43,7 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return {
       'totalSocios': socios.length,
-      'ingresosMensuales': ingresosMensuales,
+      'ingresosMensuales': ingresosDiarios, // Usamos el mismo nombre para no modificar el resto del código
       'cuotasVencidas': cuotasVencidas,
       'cuotasPorVencer': cuotasPorVencer,
       'sociosPorVencer': sociosPorVencer,
@@ -115,20 +116,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Row(
                             children: [
                               Expanded(
-                                child: _buildMetricCard(
-                                  'Total Socios',
-                                  stats['totalSocios'].toString(),
-                                  Icons.people,
-                                  const Color(0xFF2196F3),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const ListaSociosScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: _buildMetricCard(
+                                    'Total Socios',
+                                    stats['totalSocios'].toString(),
+                                    Icons.people,
+                                    const Color(0xFF2196F3),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: _buildMetricCard(
-                                  'Ingresos Mensuales',
-                                  '\$${_formatNumber(stats['ingresosMensuales'] as double)}',
-                                  Icons.attach_money,
-                                  const Color(0xFF4CAF50),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const ResumenIngresosDiariosScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: _buildMetricCard(
+                                    'Ingresos Diarios',
+                                    '\$${_formatNumber(stats['ingresosMensuales'] as double)}',
+                                    Icons.attach_money,
+                                    Theme.of(context).colorScheme.primary,
+                                  ),
                                 ),
                               ),
                             ],
@@ -137,20 +158,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Row(
                             children: [
                               Expanded(
-                                child: _buildMetricCard(
-                                  'Cuotas Vencidas',
-                                  stats['cuotasVencidas'].toString(),
-                                  Icons.error,
-                                  const Color(0xFFCF6679),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ListaSociosScreen(
+                                          filtroVencidos: true,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: _buildMetricCard(
+                                    'Cuotas Vencidas',
+                                    stats['cuotasVencidas'].toString(),
+                                    Icons.error,
+                                    const Color(0xFFCF6679),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: _buildMetricCard(
-                                  'Por Vencer (7 días)',
-                                  stats['cuotasPorVencer'].toString(),
-                                  Icons.warning,
-                                  Colors.amber,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ListaSociosScreen(
+                                          filtroPorVencer: true,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: _buildMetricCard(
+                                    'Por Vencer (7 días)',
+                                    stats['cuotasPorVencer'].toString(),
+                                    Icons.warning,
+                                    Colors.amber,
+                                  ),
                                 ),
                               ),
                             ],
@@ -179,17 +224,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildMetricCard(String titulo, String valor, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF3A3A3A)),
+        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.1)),
         boxShadow: [
           BoxShadow(
-            // Reemplazado para evitar deprecacion de withOpacity
-            color: const Color.fromRGBO(255, 255, 255, 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -199,34 +244,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  // Reemplazado para evitar deprecacion de withOpacity
-                  color: const Color.fromRGBO(255, 255, 255, 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 24),
               ),
               const Spacer(),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             valor,
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: color,
+              color: Theme.of(context).textTheme.titleLarge?.color,
+              letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             titulo,
             style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade400,
+              fontSize: 13,
+              color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.8),
+              fontWeight: FontWeight.w500,
             ),
           ),
+          if (titulo == 'Ingresos Diarios') ...[
+            const SizedBox(height: 6),
+            Text(
+              'Se reinicia a las 00:00',
+              style: TextStyle(
+                fontSize: 10,
+                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.5),
+              ),
+            ),
+          ],
         ],
       ),
     );

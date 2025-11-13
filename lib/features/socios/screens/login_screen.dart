@@ -59,11 +59,20 @@ class _LoginScreenState extends State<LoginScreen> {
     return BlocListener<AuthBloc, dynamic>(
       listener: (context, state) {
         setState(() => _isLoading = false);
-        
+
+        // Si falla, mostrar mensaje
         if (state is AuthErrorState) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.error)),
           );
+        }
+
+        // Si el login fue exitoso, navegar a la pantalla principal.
+        // Añadimos este manejo explícito porque en algunos casos el AuthWrapper
+        // puede no reconstruirse inmediatamente en el contexto actual.
+        if (state is AuthSuccess || state is AuthAuthenticatedState) {
+          // Reemplazar la ruta actual por la principal
+          Navigator.of(context).pushReplacementNamed('/main');
         }
       },
       child: Scaffold(

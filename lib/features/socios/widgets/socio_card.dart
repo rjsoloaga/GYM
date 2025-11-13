@@ -3,8 +3,8 @@ import '../models/socio.dart';
 
 class SocioCard extends StatelessWidget {
   final Socio socio;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
   final VoidCallback? onCobrar; // Para futura integración con pagos
   final VoidCallback? onNotificar; // Para futura integración con notificaciones
   final VoidCallback? onPagarCuota; // Nuevo botón para pagar cuota
@@ -12,8 +12,8 @@ class SocioCard extends StatelessWidget {
   const SocioCard({
     super.key,
     required this.socio,
-    required this.onEdit,
-    required this.onDelete,
+  this.onEdit,
+  this.onDelete,
     this.onCobrar,
     this.onNotificar,
     this.onPagarCuota,
@@ -204,7 +204,7 @@ class SocioCard extends StatelessWidget {
                       icon: const Icon(Icons.edit, size: 18),
                       label: const Text('Editar'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.blue,
+                        foregroundColor: onEdit != null ? Colors.blue : Colors.grey,
                       ),
                     ),
                   ),
@@ -215,7 +215,7 @@ class SocioCard extends StatelessWidget {
                       icon: const Icon(Icons.delete, size: 18),
                       label: const Text('Eliminar'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
+                        foregroundColor: onDelete != null ? Colors.red : Colors.grey,
                       ),
                     ),
                   ),

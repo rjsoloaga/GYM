@@ -5,15 +5,27 @@ import 'package:gym/features/socios/screens/agregar_socio_screen.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import '../widgets/socio_card.dart';
 import 'package:gym/features/notificaciones/services/notificacion_service.dart';
+import 'package:gym/features/socios/bloc/auth_bloc.dart';
 import 'package:gym/features/payments/services/pago_service.dart';
 import 'dart:developer' as developer;
 import 'package:gym/features/notificaciones/screens/gestion_plantillas_screen.dart';
 import 'package:gym/features/notificaciones/services/plantilla_service.dart';
 import 'package:gym/features/notificaciones/models/plantilla_notificacion.dart';
 import 'package:gym/core/database/database_helper.dart';
+import 'package:gym/features/payments/services/comprobante_service.dart';
+import 'package:gym/features/auth/models/usuario.dart';
 
 class ListaSociosScreen extends StatefulWidget {
-  const ListaSociosScreen({super.key});
+  final String? initialFilter; // 'vencidos', 'por_vencer', 'todos', 'pagos_del_dia'
+  final bool filtroVencidos;
+  final bool filtroPorVencer;
+  
+  const ListaSociosScreen({
+    super.key, 
+    this.initialFilter, 
+    this.filtroVencidos = false,
+    this.filtroPorVencer = false,
+  }) : assert(!(filtroVencidos && filtroPorVencer), 'No se pueden usar ambos filtros a la vez');
 
   @override
   State<ListaSociosScreen> createState() => _ListaSociosScreenState();
@@ -22,6 +34,7 @@ class ListaSociosScreen extends StatefulWidget {
 class _ListaSociosScreenState extends State<ListaSociosScreen> {
 
   final _searchController = TextEditingController();
+  late String _filtroActual;
 
   void _editarSocio(BuildContext context, Socio socio) {
     Navigator.push(
@@ -35,8 +48,20 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Determinar el filtro inicial
+    if (widget.filtroVencidos) {
+      _filtroActual = 'vencidos';
+    } else if (widget.filtroPorVencer) {
+      _filtroActual = 'por_vencer';
+    } else {
+      _filtroActual = widget.initialFilter ?? 'todos';
+    }
+    
     // SOLO recuperar chatIds reales, NO asignar temporales
     _recuperarChatIdsReales();
+    // Cargar socios que pagaron hoy si se necesita ese filtro
+    _cargarSociosPagaronHoy();
   }
 
   void _recuperarChatIdsReales() async {
@@ -271,6 +296,15 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
   void _pagarCuota(BuildContext context, Socio socio) {
     final messenger = ScaffoldMessenger.of(context);
     final bloc = context.read<SociosBloc>(); // ← Guardar BLoC antes del async
+    final authBloc = context.read<AuthBloc>(); // ← Obtener usuario actual
+    
+    // Obtener ID y datos del usuario autenticado
+    int? usuarioId;
+    Usuario? usuarioActual;
+    if (authBloc.state is AuthSuccess) {
+      usuarioActual = (authBloc.state as AuthSuccess).usuario;
+      usuarioId = usuarioActual?.id;
+    }
     
     // Mostrar loading
     messenger.showSnackBar(
@@ -281,7 +315,7 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
     );
 
     // Usar then sin problemas de contexto
-    PagoService.procesarPago(socio).then((pagoExitoso) {
+    PagoService.procesarPago(socio).then((pagoExitoso) async {
       // Remover loading
       messenger.removeCurrentSnackBar();
       
@@ -290,6 +324,39 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
         final nuevaFecha = PagoService.calcularNuevaFechaVencimiento(socio);
         final socioActualizado = socio.copyWith(fechaVencimiento: nuevaFecha);
         bloc.add(ActualizarSocioEvent(socioActualizado)); // ← Usar BLoC guardado
+        
+        // Registrar el pago en la BD con usuario que lo realizó
+        try {
+          await DatabaseHelper.instance.insertarPago(
+            socio.id!,
+            socio.precioMensual,
+            DateTime.now(),
+            'Efectivo',
+            usuarioId: usuarioId, // ← Registrar quién cobró
+          );
+          debugPrint('✅ Pago registrado en BD para socio ID: ${socio.id}, por usuario ID: $usuarioId');
+
+          // Generar comprobante en PDF
+          final archivoPDF = await ComprobanteService.generarComprobantePago(
+            socio: socio,
+            monto: socio.precioMensual,
+            fecha: DateTime.now(),
+            metodo: 'Efectivo',
+            operador: usuarioActual,
+          );
+
+          // Enviar notificación por Telegram al socio
+          await NotificacionService.notificarPagoExitoso(
+            socio,
+            monto: socio.precioMensual,
+            fechaVencimiento: nuevaFecha,
+          );
+
+          debugPrint('✅ Comprobante generado: ${archivoPDF?.path}');
+
+        } catch (e) {
+          debugPrint('❌ Error registrando pago en BD: $e');
+        }
         
         messenger.showSnackBar(
           SnackBar(
@@ -487,6 +554,48 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
     return socios;
   }
 
+  // Aplicar filtro inicial si fue pasado
+  // Lista para cachear los IDs de socios que pagaron hoy
+  late Set<int> _sociosPagaronHoy;
+
+  Future<void> _cargarSociosPagaronHoy() async {
+    try {
+      final db = await DatabaseHelper.instance.database;
+      final ahora = DateTime.now();
+      final inicioDelDia = DateTime(ahora.year, ahora.month, ahora.day);
+      final finDelDia = inicioDelDia.add(const Duration(days: 1));
+      
+      final pagosHoy = await db.rawQuery('''
+        SELECT DISTINCT socioId FROM pagos 
+        WHERE date >= ? AND date < ?
+      ''', [
+        inicioDelDia.toIso8601String(),
+        finDelDia.toIso8601String(),
+      ]);
+      
+      _sociosPagaronHoy = pagosHoy.map((p) => (p['socioId'] as int?)).whereType<int>().toSet();
+      debugPrint('📊 Socios que pagaron hoy: $_sociosPagaronHoy');
+    } catch (e) {
+      debugPrint('❌ Error cargando pagos del día: $e');
+      _sociosPagaronHoy = {};
+    }
+  }
+
+  List<Socio> _aplicarFiltro(List<Socio> socios) {
+    switch (_filtroActual) {
+      case 'vencidos':
+        return socios.where((s) => s.estadoCuota == 'Vencido').toList();
+      case 'por_vencer':
+        return socios.where((s) => s.estadoCuota == 'Por Vencer').toList();
+      case 'pagos_del_dia':
+        // Filtrar socios que pagaron hoy
+        return socios.where((s) => _sociosPagaronHoy.contains(s.id)).toList();
+      case 'todos':
+      default:
+        return socios;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -590,7 +699,9 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
         } else if (state is SociosErrorState) {
           return Center(child: Text('Error: ${state.error}'));
         } else if (state is SociosCargadosState) {
-          return _buildListaSocios(state.sociosFiltrados);
+          // Aplicar filtro inicial si existe
+          final sociosFiltrados = _aplicarFiltro(state.sociosFiltrados);
+          return _buildListaSocios(sociosFiltrados);
         } else {
           return const Center(child: Text('No hay socios cargados'));
         }
@@ -636,6 +747,19 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
       return _buildEmptyState();
     }
     
+    // Determinar rol del usuario autenticado para mostrar/ocultar acciones
+    final authState = context.read<AuthBloc>().state;
+    String currentRole = '';
+    if (authState is AuthAuthenticatedState) {
+      final user = authState.user;
+      if (user is Map && user['rol'] != null) currentRole = user['rol'];
+    } else if (authState is AuthSuccess) {
+      final user = authState.usuario;
+      if (user is Map && user['rol'] != null) currentRole = user['rol'];
+    }
+
+    final bool isAdmin = currentRole == 'admin';
+
     return RefreshIndicator(
       onRefresh: _recargarSocios,
       child: ListView.builder(
@@ -644,8 +768,8 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
           final socio = sociosOrdenados[index];
           return SocioCard(
             socio: socio,
-            onEdit: () => _editarSocio(context, socio),
-            onDelete: () => _eliminarSocio(context, socio),
+            onEdit: isAdmin ? () => _editarSocio(context, socio) : null,
+            onDelete: isAdmin ? () => _eliminarSocio(context, socio) : null,
             onNotificar: () => _enviarNotificacion(context, socio),
             onPagarCuota: () => _pagarCuota(context, socio),
           );

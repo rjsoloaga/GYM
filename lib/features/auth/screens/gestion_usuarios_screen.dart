@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/auth/models/usuario.dart';
+import 'package:gym/features/socios/bloc/auth_bloc.dart';
 
 class GestionUsuariosScreen extends StatefulWidget {
   @override
@@ -37,6 +39,17 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Obtener id del usuario autenticado para evitar que se elimine a sí mismo
+    final authState = context.read<AuthBloc>().state;
+    int? currentUserId;
+    if (authState is AuthAuthenticatedState) {
+      final user = authState.user;
+      if (user is Map && user['id'] != null) currentUserId = user['id'] as int?;
+    } else if (authState is AuthSuccess) {
+      final user = authState.usuario;
+      if (user is Map && user['id'] != null) currentUserId = user['id'] as int?;
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Gestión de Usuarios'),
@@ -62,16 +75,17 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (usuario.rol != 'admin') // No permitir editar admin
-                        IconButton(
-                          icon: Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () => _editarUsuario(usuario),
-                        ),
-                      if (usuario.rol != 'admin') // No permitir eliminar admin
-                        IconButton(
-                          icon: Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _eliminarUsuario(usuario),
-                        ),
+                            // Permitir editar cualquier usuario (incluyendo admins)
+                            IconButton(
+                              icon: Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _editarUsuario(usuario),
+                            ),
+                            // Permitir eliminar cualquier usuario excepto al propio usuario autenticado
+                            if (usuario.id != currentUserId)
+                              IconButton(
+                                icon: Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _eliminarUsuario(usuario),
+                              ),
                     ],
                   ),
                 );
@@ -90,7 +104,87 @@ class _GestionUsuariosScreenState extends State<GestionUsuariosScreen> {
   }
 
   void _editarUsuario(Usuario usuario) {
-    // Implementar edición
+    // Mostrar diálogo para editar usuario
+    final _formKey = GlobalKey<FormState>();
+    final nombreController = TextEditingController(text: usuario.nombreCompleto);
+    final dniController = TextEditingController(text: usuario.dni);
+    final telefonoController = TextEditingController(text: usuario.telefono);
+    final emailController = TextEditingController(text: usuario.email);
+    String rolSeleccionado = usuario.rol;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Editar Usuario'),
+        content: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nombreController,
+                  decoration: InputDecoration(labelText: 'Nombre Completo'),
+                  validator: (value) => value!.isEmpty ? 'Requerido' : null,
+                ),
+                TextFormField(
+                  controller: dniController,
+                  decoration: InputDecoration(labelText: 'DNI'),
+                  validator: (value) => value!.isEmpty ? 'Requerido' : null,
+                ),
+                TextFormField(
+                  controller: telefonoController,
+                  decoration: InputDecoration(labelText: 'Teléfono'),
+                  validator: (value) => value!.isEmpty ? 'Requerido' : null,
+                ),
+                TextFormField(
+                  controller: emailController,
+                  decoration: InputDecoration(labelText: 'Email'),
+                  validator: (value) => value!.isEmpty ? 'Requerido' : null,
+                ),
+                DropdownButtonFormField<String>(
+                  value: rolSeleccionado,
+                  items: ['socio', 'operador', 'admin']
+                      .map((rol) => DropdownMenuItem(
+                            value: rol,
+                            child: Text(rol.toUpperCase()),
+                          ))
+                      .toList(),
+                  onChanged: (value) => rolSeleccionado = value ?? rolSeleccionado,
+                  decoration: InputDecoration(labelText: 'Rol'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (_formKey.currentState!.validate()) {
+                final usuarioActualizado = usuario.copyWith(
+                  nombreCompleto: nombreController.text.trim(),
+                  dni: dniController.text.trim(),
+                  telefono: telefonoController.text.trim(),
+                  email: emailController.text.trim(),
+                  rol: rolSeleccionado,
+                );
+
+                await DatabaseHelper.instance.updateUsuario(usuarioActualizado);
+                _cargarUsuarios();
+                Navigator.pop(context);
+              }
+            },
+            child: Text('Guardar'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _eliminarUsuario(Usuario usuario) {

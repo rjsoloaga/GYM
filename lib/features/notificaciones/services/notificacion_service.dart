@@ -438,4 +438,52 @@ Sigue entrenando fuerte! 💥
           userName.toLowerCase().contains(socio.nombreCompleto.split(' ').first.toLowerCase());
   }
   //**************************Fin Temporal***************** */
+
+  /// Envía notificación de pago exitoso al socio por Telegram
+  static Future<bool> notificarPagoExitoso(
+    Socio socio, {
+    required double monto,
+    required DateTime fechaVencimiento,
+  }) async {
+    try {
+      // Verificar que el socio tenga chatId válido
+      if (socio.telegramChatId == null || 
+          socio.telegramChatId!.isEmpty || 
+          socio.telegramChatId!.startsWith('temp_')) {
+        print('❌ Notificación de pago: ${socio.nombreCompleto} no tiene chatId válido');
+        return false;
+      }
+
+      final mensaje = '''
+✅ *PAGO CONFIRMADO* ✅
+
+Hola *${socio.nombreCompleto}*
+
+Tu pago de *\$${monto.toStringAsFixed(2)}* ha sido registrado exitosamente.
+
+📅 *Nueva fecha de vencimiento:*
+${fechaVencimiento.day}/${fechaVencimiento.month}/${fechaVencimiento.year}
+
+Gracias por mantener tu cuota al día. 💪
+
+¡Sigue entrenando fuerte! 🏋️‍♂️
+      ''';
+
+      final resultado = await TelegramService.sendMessage(
+        chatId: socio.telegramChatId!,
+        message: mensaje,
+      );
+
+      if (resultado) {
+        print('✅ Notificación de pago enviada a ${socio.nombreCompleto}');
+      } else {
+        print('❌ Error al enviar notificación de pago a ${socio.nombreCompleto}');
+      }
+
+      return resultado;
+    } catch (e) {
+      print('❌ Excepción enviando notificación de pago: $e');
+      return false;
+    }
+  }
 }

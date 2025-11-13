@@ -198,39 +198,51 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.calendar_today),
-              title: const Text('Fecha de Inicio'),
-              subtitle: Text(_formatearFecha(_fechaInicio)),
+            GestureDetector(
               onTap: () => _seleccionarFecha(context, true),
-              tileColor: Colors.grey[50],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: Colors.grey[300]!),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Fecha de Inicio',
+                  prefixIcon: const Icon(Icons.calendar_today),
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.white,
+                ),
+                child: Text(
+                  _formatearFecha(_fechaInicio),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ),
             ),
             const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(Icons.event_busy),
-              title: const Text('Fecha de Vencimiento'),
-              subtitle: Text(_formatearFecha(_fechaVencimiento)),
+            GestureDetector(
               onTap: () => _seleccionarFecha(context, false),
-              tileColor: Colors.grey[50],
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: Colors.grey[300]!),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Fecha de Vencimiento',
+                  prefixIcon: const Icon(Icons.event_busy),
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.white,
+                ),
+                child: Text(
+                  _formatearFecha(_fechaVencimiento),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _tipoPlan,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Tipo de Plan',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.white,
               ),
-              items: ['Pendiente', 'Mensual', 'Trimestral', 'Anual'] 
+              // Añadimos 'Básico' entre las opciones porque algunos registros
+              // existentes pueden tener ese valor (migración/otros flujos).
+              items: ['Pendiente', 'Básico', 'Mensual', 'Trimestral', 'Anual'] 
                   .map((plan) => DropdownMenuItem(
                         value: plan,
                         child: Text(plan),

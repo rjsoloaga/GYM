@@ -9,6 +9,8 @@ import 'package:gym/features/notificaciones/services/notificacion_service.dart';
 import 'package:gym/features/socios/screens/aprobacion_socios_screen.dart'; 
 import 'package:gym/features/auth/screens/gestion_usuarios_screen.dart';
 import 'package:gym/features/socios/models/socio.dart';
+import 'package:gym/features/dashboard/screens/admin_reportes_screen.dart';
+import 'package:gym/features/auth/models/usuario.dart';
 
 
 class MainNavigationScreen extends StatefulWidget {
@@ -21,6 +23,7 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 1;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late final Stream<List<Socio>> _sociosPendientesBroadcast;
 
   void _logout(BuildContext context) {
     showDialog(
@@ -68,6 +71,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         await Future.delayed(Duration(seconds: 30));
       }
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Crear un stream broadcast para evitar que múltiples listeners (al abrir/cerrar drawer
+    // y al reconstruir la UI) intenten suscribirse al mismo stream de una sola suscripción.
+    _sociosPendientesBroadcast = _sociosPendientesStream().asBroadcastStream();
   }
 
   @override
@@ -314,7 +325,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           
           // ITEM NUEVO: Aprobación de Socios con badge
           StreamBuilder<List<Socio>>(
-            stream: _sociosPendientesStream(),
+            stream: _sociosPendientesBroadcast,
             builder: (context, snapshot) {
               final countPendientes = snapshot.data?.length ?? 0;
               
@@ -376,7 +387,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             },
           ),
           
-          // ITEM EXISTENTE: Gestión de Socios
+          // ITEM EXISTENTE: Gestión de Socios (accesible para todos los roles)
           ListTile(
             leading: Icon(Icons.people, color: Colors.blue),
             title: Text('Gestión de Socios'),
@@ -400,16 +411,68 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             },
           ),
           
+          // ITEM NUEVO: Reportes de Ingresos (solo para admin)
+          Builder(builder: (ctx) {
+            final authState = ctx.read<AuthBloc>().state;
+            String currentRole = '';
+            Usuario? usuarioActual;
+            
+            if (authState is AuthSuccess) {
+              usuarioActual = authState.usuario;
+              currentRole = usuarioActual?.rol ?? '';
+            }
+
+            if (currentRole == 'admin' && usuarioActual != null) {
+              return ListTile(
+                leading: Icon(Icons.assessment, color: Colors.purple),
+                title: Text('Reportes de Ingresos'),
+                subtitle: Text('Diarios y por operador'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AdminReportesScreen(usuarioActual: usuarioActual!),
+                    ),
+                  );
+                },
+              );
+            }
+
+            return SizedBox.shrink(); // Ocultar para no-admin
+          }),
+          
           // ITEM NUEVO: Gestión de Usuarios (solo para admin)
-          ListTile(
-            leading: Icon(Icons.admin_panel_settings, color: Colors.red),
-            title: Text('Gestión de Usuarios'),
-            subtitle: Text('Roles y permisos'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/gestion-usuarios');
-            },
-          ),
+          Builder(builder: (ctx) {
+            final authState = ctx.read<AuthBloc>().state;
+            String currentRole = '';
+            if (authState is AuthAuthenticatedState) {
+              final user = authState.user;
+              if (user is Map && user['rol'] != null) currentRole = user['rol'];
+            } else if (authState is AuthSuccess) {
+              final user = authState.usuario;
+              if (user is Map && user['rol'] != null) currentRole = user['rol'];
+            }
+
+            if (currentRole == 'admin') {
+              return ListTile(
+                leading: Icon(Icons.admin_panel_settings, color: Colors.red),
+                title: Text('Gestión de Usuarios'),
+                subtitle: Text('Roles y permisos'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/gestion-usuarios');
+                },
+              );
+            }
+
+            return ListTile(
+              leading: Icon(Icons.admin_panel_settings, color: Colors.grey),
+              title: Text('Gestión de Usuarios'),
+              subtitle: Text('Acceso restringido'),
+              onTap: null,
+            );
+          }),
           
           Divider(),
           

@@ -3,12 +3,14 @@ class Usuario {
   final String username;
   final String password;
   final String nombre;
+  final String rol;
 
   Usuario({
     this.id,
     required this.username,
     required this.password,
     required this.nombre,
+    this.rol = 'operador',
   });
 
   Map<String, dynamic> toMap() {
@@ -17,6 +19,7 @@ class Usuario {
       'username': username,
       'password': password,
       'nombre': nombre,
+      'rol': rol,
     };
     if (id == null) {
       map.remove('id');
@@ -30,6 +33,7 @@ class Usuario {
       username: map['username'],
       password: map['password'],
       nombre: map['nombre'],
+      rol: map['rol'] ?? 'operador',
     );
   }
 }

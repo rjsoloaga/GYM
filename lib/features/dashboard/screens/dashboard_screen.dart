@@ -1,70 +1,7 @@
-
 import 'package:flutter/material.dart';
-
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('DASHBOARD DEBUG'),
-        backgroundColor: Colors.red, // Color imposible de no ver
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => print('Refresh pressed'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () => print('Notifications pressed'),
-          ),
-        ],
-      ),
-      body: Container(
-        color: Colors.yellow, // Fondo imposible de no ver
-        child: const Center(
-          child: Text(
-            '¡DASHBOARD FUNCIONANDO!',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ),
-    );
-  }
-
-  //Boton de prueba
-  // En algún lugar del Dashboard, agrega:
-  /*
-  ElevatedButton(
-    onPressed: () async {
-      print('🔍 DIAGNÓSTICO TELEGRAM INICIADO...');
-      final updates = await TelegramService.getUpdates();
-      print('🔍 Mensajes en Telegram: ${updates.length}');
-      
-      for (final update in updates) {
-        final message = update['message'];
-        if (message != null) {
-          final text = message['text']?.toString() ?? 'VACÍO';
-          final chatId = message['chat']['id'].toString();
-          print('🔍 Mensaje: "$text" -> Chat ID: $chatId');
-        }
-      }
-    },
-    child: Text('Diagnóstico Telegram'),
-  ),
-  */
-
-}
-
-/*import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gym/features/socios/bloc/socios_bloc.dart';
-import 'package:gym/features/socios/bloc/auth_bloc.dart'; // IMPORT AGREGADO
-import 'package:gym/features/notificaciones/services/notificacion_service.dart';
-import 'package:gym/features/notificaciones/services/chatid_registro_service.dart';
-import 'package:gym/features/notificaciones/screens/gestion_plantillas_screen.dart';
-import 'package:gym/features/socios/models/socio.dart';
+import 'package:gym/core/database/database_helper.dart';
+import 'package:gym/features/socios/screens/lista_socios_screen.dart';
+import 'package:gym/features/dashboard/screens/resumen_ingresos_diarios_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -74,238 +11,203 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  bool _notificacionesVerificadas = false;
+  late Future<Map<String, dynamic>> _estadisticasFuture;
 
   @override
   void initState() {
     super.initState();
-    _verificarNotificacionesPendientes();
+    _recargarEstadisticas();
   }
 
-  void _verificarNotificacionesPendientes() async {
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (!mounted) return;
-    
-    try {
-      final sociosBloc = context.read<SociosBloc>();
-      final sociosState = sociosBloc.state;
-      
-      if (sociosState is SociosCargadosState) {
-        final sociosParaNotificar = NotificacionService.obtenerSociosParaNotificar(sociosState.sociosFiltrados);
-        
-        if (sociosParaNotificar.isNotEmpty && !_notificacionesVerificadas) {
-          _mostrarDialogoNotificacionesPendientes(sociosParaNotificar.length, sociosState.sociosFiltrados);
-        }
-      }
-    } catch (e) {
-      print('Error verificando notificaciones: $e');
-    }
-    
+  void _recargarEstadisticas() {
     setState(() {
-      _notificacionesVerificadas = true;
+      _estadisticasFuture = _cargarEstadisticas();
     });
   }
 
-  void _mostrarDialogoNotificacionesPendientes(int cantidad, List<Socio> socios) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('📅 Recordatorios Pendientes'),
-        content: Text('Hay $cantidad socios que necesitan recordatorios de pago. ¿Quieres enviarlos ahora?'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Puedes enviar recordatorios desde la lista de socios')),
-              );
-            },
-            child: const Text('Más Tarde'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _enviarNotificacionesAutomaticas(socios);
-            },
-            child: const Text('Enviar Ahora'),
-          ),
-        ],
-      ),
-    );
+  Future<Map<String, dynamic>> _cargarEstadisticas() async {
+    try {
+      final db = DatabaseHelper.instance;
+      final now = DateTime.now();
+      final socios = await db.getSocios();
+      
+      int vencidas = 0;
+      int por_vencer = 0;
+      int al_dia = 0;
+      
+      for (var socio in socios) {
+        switch (socio.estadoCuota) {
+          case 'Vencido':
+            vencidas++;
+            break;
+          case 'Por Vencer':
+            por_vencer++;
+            break;
+          case 'Al Día':
+            al_dia++;
+            break;
+        }
+      }
+      
+      final ingresos_diarios = await db.getIngresosDiarios(now);
+      
+      return {
+        'vencidas': vencidas,
+        'por_vencer': por_vencer,
+        'al_dia': al_dia,
+        'total': socios.length,
+        'ingresos_diarios': ingresos_diarios,
+        'fecha_actual': now,
+      };
+    } catch (e) {
+      print('Error: $e');
+      rethrow;
+    }
   }
 
-  void _enviarNotificacionesAutomaticas(List<Socio> socios) async {
-    final messenger = ScaffoldMessenger.of(context);
-    
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Enviando recordatorios automáticos...'),
-        duration: Duration(seconds: 3),
-      ),
-    );
-
-    try {
-      final resultados = await NotificacionService.enviarNotificacionesAutomaticas(socios);
-      final exitosas = resultados.where((r) => r['exitoso'] == true).length;
-      
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('✅ $exitosas de ${resultados.length} recordatorios enviados'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 4),
+  void _navigateWithFilter(String filter) {
+    if (filter == 'pagos_del_dia') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const ResumenIngresosDiariosScreen(),
         ),
       );
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('❌ Error enviando recordatorios: $e'),
-          backgroundColor: Colors.red,
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ListaSociosScreen(initialFilter: filter),
         ),
       );
     }
   }
 
-  void _procesarRegistrosAutomaticos() async {
-    final messenger = ScaffoldMessenger.of(context);
-    
-    messenger.showSnackBar(
-      const SnackBar(content: Text('🔄 Procesando registros de Telegram...')),
-    );
-
-    try {
-      await ChatIdRegistroService.procesarNuevosChatIds();
-      
-      final stats = await ChatIdRegistroService.obtenerEstadisticasRegistros();
-      
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('✅ ${stats['registrados']}/${stats['total']} socios registrados en Telegram'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('❌ Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _logout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cerrar Sesión'),
-        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+  Widget _buildCard(String title, String value, IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        elevation: 4,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            border: Border.all(color: color, width: 2),
+            borderRadius: BorderRadius.circular(12),
           ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<AuthBloc>().add(LogoutEvent());
-              Navigator.pop(context);
-            },
-            child: const Text('Cerrar Sesión'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 40, color: color),
+              const SizedBox(height: 12),
+              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Text(value, textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color)),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    print('🔍 DEBUG: DashboardScreen build ejecutándose');
-    
     return Scaffold(
-      appBar: null, // ← PRUEBA ESTO: AppBar nulo para ver si hay espacio
-      body: Container(
-        color: Colors.pink, // ← Color IMPOSIBLE de ignorar
-        child: const Center(
-          child: Text(
-            '¡ESTE ES EL DASHBOARD!',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-        ),
+      appBar: AppBar(
+        title: const Text('Dashboard'),
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _recargarEstadisticas),
+        ],
+      ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _estadisticasFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error, size: 60),
+                  const SizedBox(height: 16),
+                  Text('Error: ${snapshot.error}'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(onPressed: _recargarEstadisticas, child: const Text('Reintentar')),
+                ],
+              ),
+            );
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: Text('Sin datos'));
+          }
+
+          final stats = snapshot.data ?? {};
+          final vencidas = stats['vencidas'] ?? 0;
+          final por_vencer = stats['por_vencer'] ?? 0;
+          final al_dia = stats['al_dia'] ?? 0;
+          final ingresos = (stats['ingresos_diarios'] ?? 0.0) as double;
+          final fecha = stats['fecha_actual'] as DateTime?;
+          final total = stats['total'] ?? 0;
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              _recargarEstadisticas();
+              await _estadisticasFuture;
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Estadísticas del Día', style: Theme.of(context).textTheme.headlineSmall),
+                    const SizedBox(height: 24),
+                    GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      childAspectRatio: 1.0,
+                      children: [
+                        _buildCard('Vencidas', vencidas.toString(), Icons.warning_amber_rounded, Colors.red, () => _navigateWithFilter('vencidos')),
+                        _buildCard('Por Vencer', por_vencer.toString(), Icons.schedule, Colors.orange, () => _navigateWithFilter('por_vencer')),
+                        _buildCard('Al Día', al_dia.toString(), Icons.check_circle, Colors.green, () => _navigateWithFilter('todos')),
+                        _buildCard('Ingresos', '\$${ingresos.toStringAsFixed(0)}', Icons.attach_money, Colors.purple, () => _navigateWithFilter('pagos_del_dia')),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Resumen', style: Theme.of(context).textTheme.titleLarge),
+                            const SizedBox(height: 16),
+                            ListTile(leading: const Icon(Icons.group), title: const Text('Socios'), trailing: Text(total.toString(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+                            const Divider(),
+                            ListTile(leading: const Icon(Icons.money), title: const Text('Ingresos Hoy'), trailing: Text('\$${ingresos.toStringAsFixed(2)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green[700]))),
+                            if (fecha != null) ...[
+                              const SizedBox(height: 8),
+                              Text('${fecha.day}/${fecha.month}/${fecha.year}', style: Theme.of(context).textTheme.bodySmall),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
-    /*return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          '🔥 DASHBOARD DEBUG 🔥', // DEBUG: Título llamativo
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.red, // DEBUG: Rojo brillante
-        elevation: 10, // DEBUG: Sombra pronunciada
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.yellow, size: 30), // DEBUG: Amarillo y grande
-            onPressed: _procesarRegistrosAutomaticos,
-            tooltip: 'Actualizar registros Telegram',
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.yellow, size: 30), // DEBUG: Amarillo y grande
-            onPressed: _verificarNotificacionesPendientes,
-            tooltip: 'Verificar recordatorios',
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.yellow, size: 30), // DEBUG: Amarillo y grande
-            onPressed: () => _logout(context),
-            tooltip: 'Cerrar sesión',
-          ),
-        ],
-      ),
-      body: Container( // DEBUG: Container con color de fondo
-        color: Colors.yellow[100], // DEBUG: Fondo amarillo claro para verificar
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // DEBUG: Texto grande y visible
-              const Text(
-                '🚀 DASHBOARD FUNCIONANDO', // DEBUG: Texto de verificación
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red, // DEBUG: Color rojo para destacar
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              const Text('PANEL PRINCIPAL - EN CONSTRUCCIÓN'),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => Navigator.pushNamed(context, '/socios'),
-                child: const Text('Gestionar Socios'),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const GestionPlantillasScreen(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.message),
-                label: const Text('Gestionar Plantillas de Mensajes'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );*/
-  }
-}*/
+}
