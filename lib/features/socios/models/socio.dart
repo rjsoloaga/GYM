@@ -1,98 +1,156 @@
-
-//Definimos la clase, nuestro modelo para crear los objetos 'Socio'
 class Socio {
-    final int? id;
-    final String nombreCompleto;
-    final String dni;
-    final String telefono;
-    final DateTime fechaInicio;
-    final DateTime fechaVencimiento;
-    final double precioMensual;
-    final String tipoPlan;
+  final int? id;
+  final String nombreCompleto;
+  final String dni;
+  final String telefono;
+  final String email;
+  final DateTime fechaInicio;
+  final DateTime fechaVencimiento;
+  final double precioMensual;
+  final String tipoPlan; // Mantenido por compatibilidad
+  final String? telegramChatId;
+  final bool pendienteAprobacion;
+  final DateTime? fechaRegistroTelegram;
+  final int? usuarioId;
+  final int? planId; // Nuevo campo para la relación con Plan
 
-    //Contructor
-    Socio({
-        this.id,
-        required this.nombreCompleto,
-        required this.dni,
-        required this.telefono,
-        required this.fechaInicio,
-        required this.fechaVencimiento,
-        required this.precioMensual,
-        required this.tipoPlan,
-    });
+  Socio({
+    this.id,
+    required this.nombreCompleto,
+    required this.dni,
+    required this.telefono,
+    required this.email,
+    required this.fechaInicio,
+    required this.fechaVencimiento,
+    required this.precioMensual,
+    required this.tipoPlan,
+    this.telegramChatId,
+    this.pendienteAprobacion = false,
+    this.fechaRegistroTelegram,
+    this.usuarioId,
+    this.planId,
+  });
 
-    //Metodo getter para obtener el estado de la cuota
-    //Devuelve 'Verde' si la cuota esta vencida, 'Amarillo' si falta menos de 15 dias y 'Rojo' si esta vencida
-    String get estadoCuota{
-        final hoy = DateTime.now();
-        final diferencia = fechaVencimiento.difference(hoy).inDays;
+  String get estadoCuota {
+    final hoy = DateTime.now();
+    final diasHastaVencimiento = fechaVencimiento.difference(hoy).inDays;
 
-        if (diferencia >= 0) { 
-            return 'Verde';
-        } else if (diferencia.abs() <= 15) {
-            return 'Ambar';
-        } else {
-            return 'Rojo';
-        }
+    if (diasHastaVencimiento > 7) { 
+      return 'Al Día';
+    } else if (diasHastaVencimiento >= 0) {
+      return 'Por Vencer';
+    } else {
+      return 'Vencido';
     }
+  }
 
-    //Metodo para crear una copia del objeto 'Socio' con los valores modificados
-    //Sirve para editar los valores de un 'Socio'
-    Socio copyWith({
-        int? id,
-        String? nombreCompleto,
-        String? dni,
-        String? telefono,
-        DateTime? fechaInicio,
-        DateTime? fechaVencimiento,
-        double? precioMensual,
-        String? tipoPlan,
-    }) {
-        return Socio(
-            id: id ?? this.id,
-            nombreCompleto: nombreCompleto ?? this.nombreCompleto,
-            dni: dni ?? this.dni,
-            telefono: telefono ?? this.telefono,
-            fechaInicio: fechaInicio ?? this.fechaInicio,
-            fechaVencimiento: fechaVencimiento ?? this.fechaVencimiento,
-            precioMensual: precioMensual ?? this.precioMensual,
-            tipoPlan: tipoPlan ?? this.tipoPlan,
-        );
+  // NUEVO: Icono y color correctos para estado
+  String get iconoEstado {
+    final hoy = DateTime.now();
+    final diasHastaVencimiento = fechaVencimiento.difference(hoy).inDays;
+
+    if (diasHastaVencimiento > 7) { 
+      return '✅'; // Icono check para "Al Día"
+    } else if (diasHastaVencimiento >= 0) {
+      return '⚠️'; // Icono advertencia para "Por Vencer"
+    } else {
+      return '❌'; // Icono error para "Vencido"
     }
+  }
 
-    //Metodo para convertir un socio a un Map(Diccionario)
-    Map<String, dynamic> toMap() {
-    final map = {
+  // NUEVO: Color correcto para estado
+  String get colorEstado {
+    final hoy = DateTime.now();
+    final diasHastaVencimiento = fechaVencimiento.difference(hoy).inDays;
+
+    if (diasHastaVencimiento > 7) { 
+      return 'verde'; // Verde para "Al Día"
+    } else if (diasHastaVencimiento >= 0) {
+      return 'naranja'; // Naranja para "Por Vencer"
+    } else {
+      return 'rojo'; // Rojo para "Vencido"
+    }
+  }
+
+  bool get necesitaNotificacion {
+    final hoy = DateTime.now();
+    final diasHastaVencimiento = fechaVencimiento.difference(hoy).inDays;
+    
+    return (diasHastaVencimiento <= 7 && diasHastaVencimiento >= 0) || 
+          diasHastaVencimiento < 0;
+  }
+
+  Socio copyWith({
+    int? id,
+    String? nombreCompleto,
+    String? dni,
+    String? telefono,
+    String? email,
+    DateTime? fechaInicio,
+    DateTime? fechaVencimiento,
+    double? precioMensual,
+    String? tipoPlan,
+    String? telegramChatId,
+    bool? pendienteAprobacion,
+    DateTime? fechaRegistroTelegram,
+    int? usuarioId,
+    int? planId,
+  }) {
+    return Socio(
+      id: id ?? this.id,
+      nombreCompleto: nombreCompleto ?? this.nombreCompleto,
+      dni: dni ?? this.dni,
+      telefono: telefono ?? this.telefono,
+      email: email ?? this.email,
+      fechaInicio: fechaInicio ?? this.fechaInicio,
+      fechaVencimiento: fechaVencimiento ?? this.fechaVencimiento,
+      precioMensual: precioMensual ?? this.precioMensual,
+      tipoPlan: tipoPlan ?? this.tipoPlan,
+      telegramChatId: telegramChatId ?? this.telegramChatId,
+      pendienteAprobacion: pendienteAprobacion ?? this.pendienteAprobacion,
+      fechaRegistroTelegram: fechaRegistroTelegram ?? this.fechaRegistroTelegram,
+      usuarioId: usuarioId ?? this.usuarioId,
+      planId: planId ?? this.planId,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
       'id': id,
       'nombreCompleto': nombreCompleto,
       'dni': dni,
       'telefono': telefono,
+      'email': email,
       'fechaInicio': fechaInicio.toIso8601String(),
       'fechaVencimiento': fechaVencimiento.toIso8601String(),
       'precioMensual': precioMensual,
       'tipoPlan': tipoPlan,
+      'telegramChatId': telegramChatId,
+      'pendienteAprobacion': pendienteAprobacion ? 1 : 0,
+      'fechaRegistroTelegram': fechaRegistroTelegram?.toIso8601String(),
+      'usuarioId': usuarioId,
+      'planId': planId, // Nuevo campo
     };
-    // Si el id es nulo, lo removemos del mapa para que la base de datos lo autogenere.
-    if (id == null) {
-      map.remove('id');
-    }
-    return map;
   }
 
-    //Metodo para crear un Socio a partir de un Map (de la base de datos)
-    factory Socio.fromMap(Map<String, dynamic> map) {
-        return Socio(
-            id: map['id'],
-            nombreCompleto: map['nombreCompleto'],
-            dni: map['dni'],
-            telefono: map['telefono'],
-            fechaInicio: DateTime.parse(map['fechaInicio']),//Convertimos el String de la BD de vuelta a DateTime
-            fechaVencimiento: DateTime.parse(map['fechaVencimiento']),
-            precioMensual: map['precioMensual'],
-            tipoPlan: map['tipoPlan'],
-          );
-    }
-
-
+  factory Socio.fromMap(Map<String, dynamic> map) {
+    return Socio(
+      id: map['id'] as int?,
+      nombreCompleto: map['nombreCompleto'] as String? ?? '',
+      dni: map['dni'] as String? ?? '',
+      telefono: map['telefono'] as String? ?? '',
+      email: map['email'] as String? ?? '',
+      fechaInicio: DateTime.parse(map['fechaInicio'] as String),
+      fechaVencimiento: DateTime.parse(map['fechaVencimiento'] as String),
+      precioMensual: (map['precioMensual'] as num?)?.toDouble() ?? 0.0,
+      tipoPlan: map['tipoPlan'] as String? ?? 'Mensual',
+      telegramChatId: map['telegramChatId'] as String?,
+      pendienteAprobacion: (map['pendienteAprobacion'] as int?) == 1,
+      fechaRegistroTelegram: map['fechaRegistroTelegram'] != null 
+          ? DateTime.parse(map['fechaRegistroTelegram'] as String)
+          : null,
+      usuarioId: map['usuarioId'] as int?,
+      planId: map['planId'] as int?,
+    );
+  }
 }

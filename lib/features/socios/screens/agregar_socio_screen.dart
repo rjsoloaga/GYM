@@ -13,18 +13,31 @@ class AgregarSocioScreen extends StatefulWidget {
 }
 
 class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
-  //Controladores para los campos de texto
+  //final _formKey = GlobalKey<FormState>();
   final _nombreController = TextEditingController();
   final _dniController = TextEditingController();
   final _telefonoController = TextEditingController();
+  final _emailController = TextEditingController();
   final _precioController = TextEditingController();
 
+  DateTime _fechaInicio = DateTime.now();
+  DateTime _fechaVencimiento = DateTime.now().add(const Duration(days: 30));
+  String _tipoPlan = 'Mensual';
+
+  // Lista de opciones válidas para el tipo de plan
+  static const List<String> opcionesPlan = ['Pendiente', 'Básico', 'Mensual', 'Trimestral', 'Anual'];
+  
   @override
   void initState() {
     super.initState();
-    // Si vamos a editar primero cargamos los datos existentes
     if (widget.socioParaEditar != null) {
       _cargarDatosExistente();
+      // Asegurarse de que _tipoPlan sea un valor válido
+      if (!opcionesPlan.contains(_tipoPlan)) {
+        _tipoPlan = 'Mensual';
+      }
+    } else {
+      _tipoPlan = 'Mensual'; // ← Valor por defecto para nuevos socios
     }
   }
 
@@ -33,7 +46,11 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     _nombreController.text = socio.nombreCompleto;
     _dniController.text = socio.dni;
     _telefonoController.text = socio.telefono;
+    _emailController.text = socio.email;
     _precioController.text = socio.precioMensual.toString();
+    _fechaInicio = socio.fechaInicio;
+    _fechaVencimiento = socio.fechaVencimiento;
+    _tipoPlan = socio.tipoPlan;
   }
 
   void _guardarSocio() {
@@ -41,7 +58,6 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     final dni = _dniController.text;
 
     if (nombre.isEmpty || dni.isEmpty) {
-      //Mostramos un SnackBar o dialogo de error
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Nombre y DNI son obligatorios'),
@@ -51,27 +67,35 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
       return;
     }
 
-    // Crear el socio con los datos del usuario
-    final socio = Socio(
-      id: widget.socioParaEditar?.id, // Si es para editar mantenemos el ID
-      nombreCompleto: nombre,
-      dni: dni,
-      telefono: _telefonoController.text.trim(),
-      fechaInicio: widget.socioParaEditar?.fechaInicio ?? DateTime.now(), // Mantenemos la fecha original
-      fechaVencimiento: widget.socioParaEditar?.fechaVencimiento ?? DateTime.now().add(const Duration(days: 30)),
-      precioMensual: double.tryParse(_precioController.text) ?? 0.0,
-      tipoPlan: "Mensual", // <-- de momento lo dejamos fijo --
-    );
+    final socio = widget.socioParaEditar == null
+        ? Socio(
+            id: null,
+            nombreCompleto: nombre,
+            dni: dni,
+            telefono: _telefonoController.text.trim(),
+            email: _emailController.text.trim(),
+            fechaInicio: _fechaInicio,
+            fechaVencimiento: _fechaVencimiento,
+            precioMensual: double.tryParse(_precioController.text) ?? 0.0,
+            tipoPlan: _tipoPlan,
+          )
+        : widget.socioParaEditar!.copyWith(
+            nombreCompleto: nombre,
+            dni: dni,
+            telefono: _telefonoController.text.trim(),
+            email: _emailController.text.trim(),
+            fechaInicio: _fechaInicio,
+            fechaVencimiento: _fechaVencimiento,
+            precioMensual: double.tryParse(_precioController.text) ?? 0.0,
+            tipoPlan: _tipoPlan,
+          );
 
-    print('debug: socio final a guardar - ID: ${socio.id}');
+    debugPrint('debug: socio final a guardar - ID: ${socio.id}');
 
-    // Condicional para saber si es agregar(Create) o editar(Update)
     if (widget.socioParaEditar == null) {
-      // Si esta vacio creamos nuevo socio
       context.read<SociosBloc>().add(AgregarSocioEvent(socio));
-      print('Creando nuevo socio');
+      debugPrint('Creando nuevo socio');
       
-      // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Socio agregado correctamente'),
@@ -79,11 +103,9 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
         ),
       );
     } else {
-      // Si no, actualizamos el existente
       context.read<SociosBloc>().add(ActualizarSocioEvent(socio));
-      print('Actualizando socio ID: ${socio.id}');
+      debugPrint('Actualizando socio ID: ${socio.id}');
       
-      // Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Socio actualizado correctamente'),
@@ -95,12 +117,35 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     Navigator.pop(context);
   }
 
+  Future<void> _seleccionarFecha(BuildContext context, bool esFechaInicio) async {
+    final DateTime? fechaSeleccionada = await showDatePicker(
+      context: context,
+      initialDate: esFechaInicio ? _fechaInicio : _fechaVencimiento,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+
+    if (fechaSeleccionada != null) {
+      setState(() {
+        if (esFechaInicio) {
+          _fechaInicio = fechaSeleccionada;
+        } else {
+          _fechaVencimiento = fechaSeleccionada;
+        }
+      });
+    }
+  }
+
+  String _formatearFecha(DateTime fecha) {
+    return '${fecha.day}/${fecha.month}/${fecha.year}';
+  }
+
   @override
   void dispose() {
-    // Limpiamos los controladores cuando se cierre la pantalla
     _nombreController.dispose();
     _dniController.dispose();
     _telefonoController.dispose();
+    _emailController.dispose();
     _precioController.dispose();
     super.dispose();
   }
@@ -126,10 +171,9 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _dniController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'DNI *',
-                border: const OutlineInputBorder(),
-                enabled: true,
+                border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
             ),
@@ -144,12 +188,78 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
             ),
             const SizedBox(height: 16),
             TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 16),
+            TextField(
               controller: _precioController,
               decoration: const InputDecoration(
                 labelText: 'Precio Mensual',
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () => _seleccionarFecha(context, true),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Fecha de Inicio',
+                  prefixIcon: const Icon(Icons.calendar_today),
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.white,
+                ),
+                child: Text(
+                  _formatearFecha(_fechaInicio),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => _seleccionarFecha(context, false),
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Fecha de Vencimiento',
+                  prefixIcon: const Icon(Icons.event_busy),
+                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.white,
+                ),
+                child: Text(
+                  _formatearFecha(_fechaVencimiento),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _tipoPlan,
+              decoration: InputDecoration(
+                labelText: 'Tipo de Plan',
+                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.white,
+              ),
+              items: opcionesPlan
+                  .map<DropdownMenuItem<String>>((String plan) => DropdownMenuItem<String>(
+                        value: plan,
+                        child: Text(plan),
+                      ))
+                  .toList(),
+              onChanged: (String? value) {
+                if (value != null && opcionesPlan.contains(value)) {
+                  setState(() {
+                    _tipoPlan = value;
+                  });
+                }
+              },
             ),
             const SizedBox(height: 24),
             ElevatedButton(

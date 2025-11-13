@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/models/socio.dart';
 
@@ -57,13 +58,13 @@ class SociosBloc extends Bloc<SocioEvent, SociosState> {
     ActualizarSocioEvent event,
     Emitter<SociosState> emit,
   ) async {
-    print('Bloc: Actualizando socio ID: ${event.socio.id}');
+    debugPrint('Bloc: Actualizando socio ID: ${event.socio.id}');
     try {
-      final resultado = await databaseHelper.updateSocio(event.socio);
+      await databaseHelper.updateSocio(event.socio);
       // Recargar la lista despues de actualizar
       add(CargarSociosEvent());
     } catch (e) {
-      print('Bloc: Error en update: $e');
+      debugPrint('Bloc: Error en update: $e');
       emit(SociosErrorState('Error al actualizar socio: $e'));
     }
   }
