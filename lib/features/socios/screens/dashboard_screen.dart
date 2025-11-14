@@ -32,21 +32,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<Map<String, dynamic>> _obtenerEstadisticas() async {
     final socios = await DatabaseHelper.instance.getSocios();
     final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
     final ingresosDiarios = await DatabaseHelper.instance.getIngresosDiarios(ahora);
     final cuotasVencidas = await DatabaseHelper.instance.getCuotasVencidas();
     final cuotasPorVencer = await DatabaseHelper.instance.getCuotasPorVencer();
     final sociosPorVencer = socios.where((socio) {
-      final dias = socio.fechaVencimiento.difference(ahora).inDays;
-      return dias >= 0 && dias <= 7;
+      final v = DateTime(socio.fechaVencimiento.year, socio.fechaVencimiento.month, socio.fechaVencimiento.day);
+      final dias = v.difference(hoy).inDays;
+      return dias >= 0 && dias <= 7; // incluye HOY
     }).toList();
 
     final sociosVencidos = socios.where((socio) {
-      return socio.fechaVencimiento.isBefore(ahora);
+      final v = DateTime(socio.fechaVencimiento.year, socio.fechaVencimiento.month, socio.fechaVencimiento.day);
+      final dias = v.difference(hoy).inDays;
+      return dias < 0; // excluye HOY
     }).toList();
 
     return {
       'totalSocios': socios.length,
-      'ingresosMensuales': ingresosDiarios, // Usamos el mismo nombre para no modificar el resto del código
+      'ingresos_diarios': ingresosDiarios, // clave esperada por la UI
+      'fecha_actual': ahora,
+      // mantenemos compatibilidad si en otro lugar se usa la antigua
+      'ingresosMensuales': ingresosDiarios,
       'cuotasVencidas': cuotasVencidas,
       'cuotasPorVencer': cuotasPorVencer,
       'sociosPorVencer': sociosPorVencer,
@@ -287,6 +294,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 if (titulo == 'Ingresos Diarios') ...[
                   const SizedBox(height: 4),
                   Text(
+                    'Hoy: '+DateFormat('dd/MM/yyyy').format(DateTime.now()),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
                     'Se reinicia a las 00:00',
                     style: TextStyle(
                       fontSize: 9,
@@ -346,11 +361,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 12),
                 ...sociosPorVencer.map((socio) {
-                  final dias = socio.fechaVencimiento.difference(DateTime.now()).inDays;
+                  final ahora2 = DateTime.now();
+                  final hoy2 = DateTime(ahora2.year, ahora2.month, ahora2.day);
+                  final v = DateTime(socio.fechaVencimiento.year, socio.fechaVencimiento.month, socio.fechaVencimiento.day);
+                  final dias = v.difference(hoy2).inDays;
+                  final msg = dias == 0
+                      ? 'Vence hoy'
+                      : dias == 1
+                          ? 'Vence mañana'
+                          : 'Vence en $dias días';
                   return _buildRecordatorioItem(
                     socio,
                     Colors.amber,
-                    'Vence en $dias días',
+                    msg,
                   );
                 }),
               ],
@@ -388,7 +411,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 const SizedBox(height: 12),
                 ...sociosVencidos.take(5).map((socio) {
-                  final dias = DateTime.now().difference(socio.fechaVencimiento).inDays;
+                  final ahora2 = DateTime.now();
+                  final hoy2 = DateTime(ahora2.year, ahora2.month, ahora2.day);
+                  final v = DateTime(socio.fechaVencimiento.year, socio.fechaVencimiento.month, socio.fechaVencimiento.day);
+                  final dias = hoy2.difference(v).inDays;
                   return _buildRecordatorioItem(
                     socio,
                     const Color(0xFFCF6679),
