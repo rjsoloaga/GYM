@@ -26,6 +26,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 1;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final Stream<List<Socio>> _sociosPendientesBroadcast;
+  int _dashboardRefreshKey = 0; // fuerza recreación del dashboard
 
   void _logout(BuildContext context) {
     showDialog(
@@ -148,9 +149,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   IconButton(
                     icon: const Icon(Icons.refresh),
                     onPressed: () {
+                      setState(() {
+                        _dashboardRefreshKey++; // Forzar recálculo de estadísticas
+                      });
                       _procesarRegistrosTelegram(context);
                     },
-                    tooltip: 'Actualizar registros Telegram',
+                    tooltip: 'Actualizar',
                   ),
                   IconButton(
                     icon: const Icon(Icons.notifications),
@@ -167,46 +171,59 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 ],
                 bottom: _buildInfoBar(context, authState),
               ),
-              body: const DashboardScreen(),
+              body: DashboardScreen(key: ValueKey<int>(_dashboardRefreshKey)),
             ),
           ];
 
-          return Scaffold(
-            key: _scaffoldKey,
-            drawer: _buildDrawer(context),
-            body: _screens[_currentIndex],
-            bottomNavigationBar: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color.fromRGBO(255,255,255,0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: BottomNavigationBar(
-                currentIndex: _currentIndex,
-                onTap: (index) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
-                backgroundColor: const Color(0xFF1E1E1E),
-                selectedItemColor: const Color(0xFF2196F3),
-                unselectedItemColor: Colors.grey,
-                type: BottomNavigationBarType.fixed,
-                items: const [
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.people),
-                    label: 'Socios',
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Icon(Icons.dashboard),
-                    label: 'Dashboard',
-                  ),
-                ],
+          return BlocListener<SociosBloc, SociosState>(
+            listener: (context, sociosState) {
+              if (sociosState is SociosCargadosState) {
+                setState(() {
+                  _dashboardRefreshKey++; // Recalcular cuando cambia la lista de socios
+                });
+              }
+            },
+            child: Scaffold(
+              key: _scaffoldKey,
+              drawer: _buildDrawer(context),
+              body: _screens[_currentIndex],
+              bottomNavigationBar: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E1E),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color.fromRGBO(255,255,255,0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: BottomNavigationBar(
+                  currentIndex: _currentIndex,
+                  onTap: (index) {
+                    setState(() {
+                      _currentIndex = index;
+                      if (index == 1) {
+                        // Al entrar al Dashboard, recrearlo para recalcular estadísticas
+                        _dashboardRefreshKey++;
+                      }
+                    });
+                  },
+                  backgroundColor: const Color(0xFF1E1E1E),
+                  selectedItemColor: const Color(0xFF2196F3),
+                  unselectedItemColor: Colors.grey,
+                  type: BottomNavigationBarType.fixed,
+                  items: const [
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.people),
+                      label: 'Socios',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.dashboard),
+                      label: 'Dashboard',
+                    ),
+                  ],
+                ),
               ),
             ),
           );

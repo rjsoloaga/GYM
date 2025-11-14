@@ -54,191 +54,177 @@ class SocioCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Color estadoColor = _getColorByEstado();
+    final IconData estadoIcon = _getIconByEstado();
+    final int dias = socio.fechaVencimiento.difference(DateTime.now()).inDays;
+    final String diasTexto = dias < 0
+        ? 'Vencida hace ${-dias} días'
+        : dias == 0
+            ? 'Vence hoy'
+            : '$dias días restantes';
+    final Color chipColor = dias < 0
+        ? Colors.red
+        : (dias <= 7 ? Colors.orange : Colors.green);
+
     return Card(
-      elevation: 3,
+      elevation: 6,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         decoration: BoxDecoration(
-          border: Border(
-            left: BorderSide(
-              color: _getColorByEstado(),
-              width: 6,
-            ),
-          ),
+          borderRadius: BorderRadius.circular(16),
+          color: Theme.of(context).cardColor,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header con nombre y estado
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      socio.nombreCompleto,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Indicador de estado
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: estadoColor.withOpacity(0.15),
+                    shape: BoxShape.circle,
                   ),
-                  Row(
+                  child: Icon(estadoIcon, color: estadoColor),
+                ),
+                const SizedBox(width: 12),
+                // Datos del socio
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        _getIconByEstado(),
-                        color: _getColorByEstado(),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 4),
                       Text(
-                        socio.estadoCuota,
-                        style: TextStyle(
-                          color: _getColorByEstado(),
-                          fontWeight: FontWeight.bold,
+                        socio.nombreCompleto,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      const SizedBox(height: 8),
+                      _infoWithIcon(Icons.badge, 'DNI: ${socio.dni}'),
+                      _infoWithIcon(Icons.phone, socio.telefono),
+                      _infoWithIcon(Icons.email, socio.email),
+                      const SizedBox(height: 8),
+                      _buildStatusPill(diasTexto, chipColor),
                     ],
                   ),
-                ],
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Información del socio
-              _buildInfoRow('DNI:', socio.dni),
-              _buildInfoRow('Teléfono:', socio.telefono),
-              _buildInfoRow('Email:', socio.email),
-              
-              const SizedBox(height: 4),
-              _buildTelegramStatus(socio),
-              
-              const SizedBox(height: 8),
-              
-              // Fechas
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildDateInfo(
-                      'Inicio:',
-                      _formatearFecha(socio.fechaInicio),
-                    ),
-                  ),
-                  Expanded(
-                    child: _buildDateInfo(
-                      'Vence:',
-                      _formatearFecha(socio.fechaVencimiento),
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Plan y precio
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Chip(
-                    label: Text(
-                      socio.tipoPlan,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    backgroundColor: Colors.blue,
-                  ),
-                  Text(
-                    '\$${socio.precioMensual.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 16),
-
-              // 🆕 BOTÓN DE NOTIFICACIÓN (si está habilitado y el socio lo necesita)
-              if (onNotificar != null && socio.necesitaNotificacion) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: onNotificar, // ← ESTE BOTÓN DEBE FUNCIONAR
-                    icon: const Icon(Icons.notifications, size: 18),
-                    label: const Text('Recordatorio de Cuota'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.orange,
-                      side: const BorderSide(color: Colors.orange),
-                    ),
-                  ),
                 ),
-                const SizedBox(height: 8),
-              ],
-
-              // 🆕 BOTÓN PAGAR CUOTA (solo para socios vencidos o por vencer)
-              if (onPagarCuota != null && socio.estadoCuota != 'Verde') ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: onPagarCuota,
-                    icon: const Icon(Icons.payment, size: 18),
-                    label: const Text('Cobrar Cuota'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-
-              // BOTONES DE ACCIÓN PRINCIPALES
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: onEdit,
-                      icon: const Icon(Icons.edit, size: 18),
-                      label: const Text('Editar'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: onEdit != null ? Colors.blue : Colors.grey,
+                const SizedBox(width: 12),
+                // Acciones verticales
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (onNotificar != null && socio.necesitaNotificacion)
+                      _actionIconButton(
+                        context,
+                        icon: Icons.notifications,
+                        tooltip: 'Recordar por Telegram',
+                        color: Colors.orange,
+                        onPressed: onNotificar,
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete, size: 18),
-                      label: const Text('Eliminar'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: onDelete != null ? Colors.red : Colors.grey,
+                    if (onPagarCuota != null)
+                      _actionIconButton(
+                        context,
+                        icon: Icons.attach_money,
+                        tooltip: 'Cobrar cuota',
+                        color: Colors.green,
+                        onPressed: onPagarCuota,
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              
-              // Botón de cobrar (para futuro)
-              if (onCobrar != null) ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: onCobrar,
-                    icon: const Icon(Icons.payment),
-                    label: const Text('Cobrar Cuota'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
+                    if (onEdit != null)
+                      _actionIconButton(
+                        context,
+                        icon: Icons.edit,
+                        tooltip: 'Editar',
+                        color: Colors.blue,
+                        onPressed: onEdit,
+                      ),
+                    if (onDelete != null)
+                      _actionIconButton(
+                        context,
+                        icon: Icons.delete,
+                        tooltip: 'Eliminar',
+                        color: Colors.red,
+                        onPressed: onDelete,
+                      ),
+                  ],
                 ),
               ],
-            ],
+            ),
+            const SizedBox(height: 8),
+            _buildTelegramStatus(socio),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoWithIcon(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: Colors.white70),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 13),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusPill(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.6)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  Widget _actionIconButton(
+    BuildContext context, {
+    required IconData icon,
+    required String tooltip,
+    required Color color,
+    VoidCallback? onPressed,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: color.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onPressed,
+            child: Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              child: Icon(icon, color: color),
+            ),
           ),
         ),
       ),
