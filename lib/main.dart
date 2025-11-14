@@ -72,7 +72,22 @@ Future<void> main() async {
 
   // Iniciar la aplicación
   runApp(const MyApp());
+  
+  // Iniciar verificación periódica de Telegram y el servicio en segundo plano
+  startTelegramAutoCheck();
+}
 
+// Verificación automática de Telegram y arranque del servicio en segundo plano
+Future<void> startTelegramAutoCheck() async {
+  // Verificar nuevos mensajes cada 5 minutos
+  Timer.periodic(Duration(seconds: 5), (timer) async {
+    try {
+      await TelegramService.getUpdates();
+      print('✅ Verificación automática de Telegram completada');
+    } catch (e) {
+      print('❌ Error en verificación automática: $e');
+    }
+  });
   // Iniciar el servicio en segundo plano para Telegram
   if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
     await BackgroundService.start();

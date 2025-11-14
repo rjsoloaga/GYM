@@ -11,9 +11,8 @@ class Socio {
   final String? telegramChatId;
   final bool pendienteAprobacion;
   final DateTime? fechaRegistroTelegram;
-  final int? usuarioId;
-  final int? planId; // Nuevo campo para la relación con Plan
-
+  final int? usuarioId; 
+  final int? planId; // NUEVO: relación con Plan
   Socio({
     this.id,
     required this.nombreCompleto,
@@ -27,8 +26,8 @@ class Socio {
     this.telegramChatId,
     this.pendienteAprobacion = false,
     this.fechaRegistroTelegram,
-    this.usuarioId,
-    this.planId,
+    this.usuarioId, // NUEVO
+    this.planId, // NUEVO
   });
 
   String get estadoCuota {
@@ -93,8 +92,8 @@ class Socio {
     String? telegramChatId,
     bool? pendienteAprobacion,
     DateTime? fechaRegistroTelegram,
-    int? usuarioId,
-    int? planId,
+    int? usuarioId, // NUEVO
+    int? planId, // NUEVO
   }) {
     return Socio(
       id: id ?? this.id,
@@ -109,8 +108,8 @@ class Socio {
       telegramChatId: telegramChatId ?? this.telegramChatId,
       pendienteAprobacion: pendienteAprobacion ?? this.pendienteAprobacion,
       fechaRegistroTelegram: fechaRegistroTelegram ?? this.fechaRegistroTelegram,
-      usuarioId: usuarioId ?? this.usuarioId,
-      planId: planId ?? this.planId,
+      usuarioId: usuarioId ?? this.usuarioId, // NUEVO
+      planId: planId ?? this.planId, // NUEVO
     );
   }
 
@@ -128,8 +127,8 @@ class Socio {
       'telegramChatId': telegramChatId,
       'pendienteAprobacion': pendienteAprobacion ? 1 : 0,
       'fechaRegistroTelegram': fechaRegistroTelegram?.toIso8601String(),
-      'usuarioId': usuarioId,
-      'planId': planId, // Nuevo campo
+      'usuarioId': usuarioId, // NUEVO
+      'planId': planId, // NUEVO
     };
   }
 
@@ -149,8 +148,8 @@ class Socio {
       fechaRegistroTelegram: map['fechaRegistroTelegram'] != null 
           ? DateTime.parse(map['fechaRegistroTelegram'] as String)
           : null,
-      usuarioId: map['usuarioId'] as int?,
-      planId: map['planId'] as int?,
+      usuarioId: map['usuarioId'] as int?, // NUEVO
+      planId: map['planId'] as int?, // NUEVO
     );
   }
 }
