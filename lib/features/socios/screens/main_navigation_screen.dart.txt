@@ -8,6 +8,7 @@ import 'package:gym/features/notificaciones/services/chatid_registro_service.dar
 import 'package:gym/features/notificaciones/services/notificacion_service.dart';
 import 'package:gym/features/socios/screens/aprobacion_socios_screen.dart'; 
 import 'package:gym/features/auth/screens/gestion_usuarios_screen.dart';
+import 'package:gym/features/planes/screens/planes_list_screen.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import 'package:gym/features/dashboard/screens/admin_reportes_screen.dart';
 import 'package:gym/features/auth/models/usuario.dart';
@@ -441,6 +442,33 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             }
 
             return SizedBox.shrink(); // Ocultar para no-admin
+          }),
+
+          // ITEM NUEVO: Gestión de Planes (solo para admin)
+          Builder(builder: (ctx) {
+            final authState = ctx.read<AuthBloc>().state;
+            String currentRole = '';
+            if (authState is AuthAuthenticatedState) {
+              final user = authState.user;
+              if (user is Map && user['rol'] != null) currentRole = user['rol'];
+            } else if (authState is AuthSuccess) {
+              final user = authState.usuario;
+              if (user is Map && user['rol'] != null) currentRole = user['rol'];
+            }
+
+            if (currentRole == 'admin') {
+              return ListTile(
+                leading: Icon(Icons.list_alt, color: Colors.teal),
+                title: Text('Gestión de Planes'),
+                subtitle: Text('Planes y precios'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/planes');
+                },
+              );
+            }
+
+            return SizedBox.shrink();
           }),
           
           // ITEM NUEVO: Gestión de Usuarios (solo para admin)

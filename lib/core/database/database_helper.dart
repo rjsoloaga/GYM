@@ -3,7 +3,7 @@ import 'package:path/path.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import 'package:gym/features/auth/models/usuario.dart';
-import 'package:gym/features/planes/models/plan.dart';
+import 'package:gym/features/planes/models/plan.dart'; // Importar el modelo Plan
 
 class DatabaseHelper {
   DatabaseHelper._privateConstructor();
@@ -16,6 +16,33 @@ class DatabaseHelper {
     return _database!;
   }
 
+  // SQL para tabla de planes
+  static const String _createPlanesTableSql = '''
+    CREATE TABLE planes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL,
+      precio REAL NOT NULL,
+      duracionDias INTEGER,
+      tiempoIndeterminado INTEGER DEFAULT 0,
+      activo INTEGER DEFAULT 1,
+      fechaCreacion TEXT NOT NULL,
+      fechaActualizacion TEXT NOT NULL
+    )
+  ''';
+
+  static const String _createPlanesTableIfNotExistsSql = '''
+    CREATE TABLE IF NOT EXISTS planes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL,
+      precio REAL NOT NULL,
+      duracionDias INTEGER,
+      tiempoIndeterminado INTEGER DEFAULT 0,
+      activo INTEGER DEFAULT 1,
+      fechaCreacion TEXT NOT NULL,
+      fechaActualizacion TEXT NOT NULL
+    )
+  ''';
+
   Future<Database> _initDatabase() async {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, 'gym_database.db');
@@ -23,7 +50,7 @@ class DatabaseHelper {
     // ⚠️ INCREMENTA LA VERSIÓN para crear nuevas tablas
     return await openDatabase(
       path,
-      version: 9, // Versión 9: incluye usuarios, pagos, planes, planId en socios y tiempoIndeterminado
+      version: 9, // Incrementado a 9 para agregar tiempoIndeterminado a planes
       onCreate: (db, version) async {
         // Crear tabla de usuarios primero
         await db.execute(_createUsuariosTableSql);
@@ -169,22 +196,6 @@ class DatabaseHelper {
             // Continuar con la migración incluso si hay un error
           }
         }
-
-        // Migración desde versión 5 a 6: crear tabla de planes y columna planId en socios
-        if (oldVersion <= 5) {
-          try {
-            await db.execute(_createPlanesTableSql);
-          } catch (e) {
-            debugPrint('Error creando tabla planes en migración: $e');
-          }
-
-          try {
-            await db.execute('ALTER TABLE socios ADD COLUMN planId INTEGER');
-          } catch (e) {
-            // Es posible que la columna ya exista
-            debugPrint('Info al agregar planId a socios: $e');
-          }
-        }
       },
     );
   }
@@ -275,33 +286,6 @@ class DatabaseHelper {
     )
   ''';
 
-  // SQL para tabla de planes
-  static const String _createPlanesTableSql = '''
-    CREATE TABLE planes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre TEXT NOT NULL,
-      precio REAL NOT NULL,
-      duracionDias INTEGER,
-      tiempoIndeterminado INTEGER DEFAULT 0,
-      activo INTEGER DEFAULT 1,
-      fechaCreacion TEXT NOT NULL,
-      fechaActualizacion TEXT NOT NULL
-    )
-  ''';
-
-  static const String _createPlanesTableIfNotExistsSql = '''
-    CREATE TABLE IF NOT EXISTS planes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      nombre TEXT NOT NULL,
-      precio REAL NOT NULL,
-      duracionDias INTEGER,
-      tiempoIndeterminado INTEGER DEFAULT 0,
-      activo INTEGER DEFAULT 1,
-      fechaCreacion TEXT NOT NULL,
-      fechaActualizacion TEXT NOT NULL
-    )
-  ''';
-
   static const String _createPagosTableIfNotExistsSql = '''
     CREATE TABLE IF NOT EXISTS pagos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -355,7 +339,7 @@ class DatabaseHelper {
     await db.insert('usuarios', {
       'nombreCompleto': 'Administrador',
       'email': 'admin@gym.com',
-      'telefono': 'admin',
+      'telefono': '0000000000',
       'dni': 'admin',
       'rol': 'admin',
       'fechaCreacion': DateTime.now().toIso8601String(),
@@ -378,7 +362,7 @@ class DatabaseHelper {
       await db.insert('usuarios', {
         'nombreCompleto': 'Administrador',
         'email': 'admin@gym.com',
-        'telefono': 'admin',
+        'telefono': '0000000000',
         'dni': 'admin',
         'rol': 'admin',
         'fechaCreacion': DateTime.now().toIso8601String(),
@@ -416,6 +400,12 @@ class DatabaseHelper {
     return result.isNotEmpty ? Plan.fromMap(result.first) : null;
   }
   
+  // Obtener un socio por ID
+  Future<Socio?> getSocio(int id) async {
+    final db = await database;
+    final result = await db.query('socios', where: 'id = ?', whereArgs: [id]);
+    return result.isNotEmpty ? Socio.fromMap(result.first) : null;
+  }
 
   // Actualizar un plan existente
   Future<int> actualizarPlan(Plan plan) async {
@@ -434,8 +424,8 @@ class DatabaseHelper {
   Future<int> desactivarPlan(int id) async {
     final db = await database;
     return await db.rawUpdate(
-      'UPDATE planes SET activo = 0, fechaActualizacion = ? WHERE id = ?',
-      [DateTime.now().toIso8601String(), id],
+      'UPDATE planes SET activo = 0 WHERE id = ?',
+      [id],
     );
   }
 
@@ -447,7 +437,6 @@ class DatabaseHelper {
       'nombre': '${plan.nombre} - \$${plan.precio.toStringAsFixed(2)}',
       'precio': plan.precio,
       'duracionDias': plan.duracionDias,
-      'tiempoIndeterminado': plan.tiempoIndeterminado,
     }).toList();
   }
 
@@ -529,13 +518,6 @@ class DatabaseHelper {
     Database db = await instance.database;
     final List<Map<String, dynamic>> maps = await db.query('socios');
     return List.generate(maps.length, (i) => Socio.fromMap(maps[i]));
-  }
-
-  // Obtener un socio por ID
-  Future<Socio?> getSocio(int id) async {
-    final db = await database;
-    final result = await db.query('socios', where: 'id = ?', whereArgs: [id]);
-    return result.isNotEmpty ? Socio.fromMap(result.first) : null;
   }
 
   // Obtener socios pendientes de aprobación
@@ -719,6 +701,5 @@ class DatabaseHelper {
       ORDER BY p.date DESC
     ''', [inicioDelDia.toIso8601String(), finDelDia.toIso8601String()]);
   }
-
 
 }
