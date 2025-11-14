@@ -313,7 +313,12 @@ class _PlanesListScreenState extends State<PlanesListScreen> {
             key: _refreshIndicatorKey,
             onRefresh: _handleRefresh,
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+              padding: EdgeInsets.only(
+                left: 4.0,
+                right: 4.0,
+                top: 8.0,
+                bottom: MediaQuery.of(context).padding.bottom + 96.0,
+              ),
               itemCount: planes.length,
               itemBuilder: (ctx, index) {
                 final plan = planes[index];

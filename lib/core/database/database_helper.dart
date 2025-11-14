@@ -389,8 +389,34 @@ class DatabaseHelper {
   Future<List<Plan>> getPlanes({bool soloActivos = true}) async {
     final db = await database;
     final where = soloActivos ? 'WHERE activo = 1' : '';
-    final result = await db.rawQuery('SELECT * FROM planes $where ORDER BY nombre');
-    return result.map((map) => Plan.fromMap(map)).toList();
+    final orderBy = 'ORDER BY nombre';
+    final query = 'SELECT * FROM planes $where $orderBy';
+    
+    if (kDebugMode) {
+      print('🔍 [DatabaseHelper] Ejecutando consulta de planes:');
+      print('   ├─ Query: $query');
+      print('   └─ soloActivos: $soloActivos');
+    }
+    
+    try {
+      final result = await db.rawQuery(query);
+      
+      if (kDebugMode) {
+        print('✅ [DatabaseHelper] Se encontraron ${result.length} planes');
+        if (result.isEmpty) {
+          // Verificar si hay planes en la base de datos
+          final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM planes'));
+          print('   ℹ️  Total de planes en la base de datos: $count');
+          final countActivos = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM planes WHERE activo = 1'));
+          print('   ℹ️  Planes activos: $countActivos');
+        }
+      }
+      
+      return result.map((map) => Plan.fromMap(map)).toList();
+    } catch (e) {
+      print('❌ [DatabaseHelper] Error al obtener planes: $e');
+      rethrow;
+    }
   }
 
   // Obtener un plan por ID
