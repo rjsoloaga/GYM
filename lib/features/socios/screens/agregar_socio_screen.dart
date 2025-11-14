@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gym/features/planes/services/plan_service.dart';
+import 'package:gym/features/planes/models/plan.dart';
 import 'package:gym/features/socios/bloc/socios_bloc.dart';
 import 'package:gym/features/socios/models/socio.dart';
 
@@ -26,6 +28,15 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
 
   // Lista de opciones válidas para el tipo de plan
   static const List<String> opcionesPlan = ['Pendiente', 'Básico', 'Mensual', 'Trimestral', 'Anual'];
+  List<String> _opcionesPlan = List.from(opcionesPlan);
+  List<Plan> _planesActivos = [];
+  String _mapTipoPlan(String valor) {
+    final v = valor.trim().toLowerCase();
+    for (final opt in opcionesPlan) {
+      if (opt.toLowerCase() == v) return opt;
+    }
+    return valor.trim();
+  }
   
   @override
   void initState() {
@@ -33,12 +44,12 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     if (widget.socioParaEditar != null) {
       _cargarDatosExistente();
       // Asegurarse de que _tipoPlan sea un valor válido
-      if (!opcionesPlan.contains(_tipoPlan)) {
-        _tipoPlan = 'Mensual';
-      }
+      _tipoPlan = _mapTipoPlan(_tipoPlan);
+      if (!opcionesPlan.contains(_tipoPlan)) _tipoPlan = 'Mensual';
     } else {
       _tipoPlan = 'Mensual'; // ← Valor por defecto para nuevos socios
     }
+    _cargarPlanesActivos();
   }
 
   void _cargarDatosExistente() {
@@ -50,7 +61,32 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     _precioController.text = socio.precioMensual.toString();
     _fechaInicio = socio.fechaInicio;
     _fechaVencimiento = socio.fechaVencimiento;
-    _tipoPlan = socio.tipoPlan;
+    _tipoPlan = _mapTipoPlan(socio.tipoPlan);
+  }
+
+  Future<void> _cargarPlanesActivos() async {
+    try {
+      final service = PlanService();
+      final planes = await service.obtenerPlanesActivos();
+      if (!mounted) return;
+      setState(() {
+        _planesActivos = planes;
+        _opcionesPlan = planes.isNotEmpty
+            ? planes.map((p) => p.nombre).toList()
+            : List.from(opcionesPlan);
+        if (!_opcionesPlan.contains(_tipoPlan)) {
+          _tipoPlan = _opcionesPlan.first;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _opcionesPlan = List.from(opcionesPlan);
+        if (!_opcionesPlan.contains(_tipoPlan)) {
+          _tipoPlan = _opcionesPlan.first;
+        }
+      });
+    }
   }
 
   void _guardarSocio() {
@@ -240,21 +276,21 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _tipoPlan,
+              value: _opcionesPlan.contains(_tipoPlan) ? _tipoPlan : (_opcionesPlan.isNotEmpty ? _opcionesPlan.first : null),
               decoration: InputDecoration(
                 labelText: 'Tipo de Plan',
                 border: const OutlineInputBorder(),
                 filled: true,
                 fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.white,
               ),
-              items: opcionesPlan
+              items: _opcionesPlan
                   .map<DropdownMenuItem<String>>((String plan) => DropdownMenuItem<String>(
                         value: plan,
                         child: Text(plan),
                       ))
                   .toList(),
               onChanged: (String? value) {
-                if (value != null && opcionesPlan.contains(value)) {
+                if (value != null && _opcionesPlan.contains(value)) {
                   setState(() {
                     _tipoPlan = value;
                   });

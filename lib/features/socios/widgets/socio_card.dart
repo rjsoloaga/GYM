@@ -69,7 +69,9 @@ class SocioCard extends StatelessWidget {
         ? 'Vencida hace ${-dias} días'
         : dias == 0
             ? 'Vence hoy'
-            : '$dias días restantes';
+            : dias == 1
+                ? 'Vence mañana'
+                : '$dias días restantes';
     final Color chipColor = dias < 0
         ? Colors.red
         : (dias <= 7 ? Colors.orange : Colors.green);

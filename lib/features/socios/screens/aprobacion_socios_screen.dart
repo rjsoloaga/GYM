@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym/features/notificaciones/services/chatid_registro_service.dart';
 import 'package:gym/features/socios/models/socio.dart';
+import 'package:gym/features/socios/bloc/socios_bloc.dart';
 
 class AprobacionSociosScreen extends StatefulWidget {
   @override
@@ -38,6 +40,10 @@ class _AprobacionSociosScreenState extends State<AprobacionSociosScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('✅ Socio aprobado exitosamente')),
       );
+      // Forzar recarga global de socios para que la lista se actualice al volver
+      if (mounted) {
+        context.read<SociosBloc>().add(CargarSociosEvent());
+      }
       _cargarDatos();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

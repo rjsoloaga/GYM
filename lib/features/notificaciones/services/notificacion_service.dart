@@ -116,8 +116,14 @@ class NotificacionService {
 
   // NUEVO MÉTODO MEJORADO para mensajes específicos por estado de cuota
   static String _generarMensajePorEstadoCuota(Socio socio) {
-    final hoy = DateTime.now();
-    final diasHastaVencimiento = socio.fechaVencimiento.difference(hoy).inDays;
+    final now = DateTime.now();
+    final hoy = DateTime(now.year, now.month, now.day);
+    final venc = DateTime(
+      socio.fechaVencimiento.year,
+      socio.fechaVencimiento.month,
+      socio.fechaVencimiento.day,
+    );
+    final diasHastaVencimiento = venc.difference(hoy).inDays;
     
     switch (socio.estadoCuota) {
       case 'Vencido':
@@ -136,12 +142,17 @@ Tu cuota está *VENCIDA hace $diasVencidos días*.
         ''';
         
       case 'Por Vencer':
+        final mensajeDias = diasHastaVencimiento == 0
+            ? 'Tu cuota *vence HOY*.'
+            : diasHastaVencimiento == 1
+                ? 'Tu cuota *vence MAÑANA*.'
+                : 'Tu cuota *vence en $diasHastaVencimiento días*.';
         return '''
 🔔 *RECORDATORIO AMIGABLE* 🔔
 
 Hola *${socio.nombreCompleto}*
 
-Tu cuota *vence en $diasHastaVencimiento días*.
+$mensajeDias
 *Fecha de vencimiento:* ${socio.fechaVencimiento.day}/${socio.fechaVencimiento.month}/${socio.fechaVencimiento.year}
 
 💳 Podés pagar en efectivo o transferencia.
@@ -282,11 +293,19 @@ Sigue entrenando fuerte! 💥
   }
 
   static String _generarMensajeDefault(Socio socio) {
-    final hoy = DateTime.now();
-    final diasHastaVencimiento = socio.fechaVencimiento.difference(hoy).inDays;
+    final now = DateTime.now();
+    final hoy = DateTime(now.year, now.month, now.day);
+    final venc = DateTime(
+      socio.fechaVencimiento.year,
+      socio.fechaVencimiento.month,
+      socio.fechaVencimiento.day,
+    );
+    final diasHastaVencimiento = venc.difference(hoy).inDays;
     
-    if (diasHastaVencimiento > 0) {
+    if (diasHastaVencimiento > 1) {
       return 'Hola ${socio.nombreCompleto}. Recordatorio: Tu cuota vence en $diasHastaVencimiento días.';
+    } else if (diasHastaVencimiento == 1) {
+      return 'Hola ${socio.nombreCompleto}. Recordatorio: Tu cuota vence MAÑANA.';
     } else if (diasHastaVencimiento == 0) {
       return 'Hola ${socio.nombreCompleto}. ATENCIÓN: Tu cuota vence HOY.';
     } else {
