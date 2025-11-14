@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym/features/planes/services/plan_service.dart';
 import 'package:gym/features/planes/models/plan.dart';
@@ -77,6 +78,14 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
         if (!_opcionesPlan.contains(_tipoPlan)) {
           _tipoPlan = _opcionesPlan.first;
         }
+        // Actualizar precio automáticamente según el plan seleccionado (tanto para nuevo como para editar)
+        if (_planesActivos.isNotEmpty) {
+          final planSeleccionado = _planesActivos.firstWhere(
+            (p) => p.nombre == _tipoPlan,
+            orElse: () => _planesActivos.first,
+          );
+          _precioController.text = planSeleccionado.precio.toStringAsFixed(2);
+        }
       });
     } catch (_) {
       if (!mounted) return;
@@ -154,6 +163,9 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
   }
 
   Future<void> _seleccionarFecha(BuildContext context, bool esFechaInicio) async {
+    // Ocultar el teclado antes de mostrar el date picker
+    FocusScope.of(context).unfocus();
+    
     final DateTime? fechaSeleccionada = await showDatePicker(
       context: context,
       initialDate: esFechaInicio ? _fechaInicio : _fechaVencimiento,
@@ -193,7 +205,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
         title: Text(widget.socioParaEditar == null ? 'Agregar Nuevo Socio' : 'Editar Socio'),
         backgroundColor: Colors.blue,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
@@ -232,13 +244,21 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _precioController,
-              decoration: const InputDecoration(
-                labelText: 'Precio Mensual',
-                border: OutlineInputBorder(),
+            // El precio siempre es informativo (no editable), viene del plan seleccionado
+            InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Precio',
+                prefixIcon: const Icon(Icons.attach_money),
+                border: const OutlineInputBorder(),
+                filled: true,
+                fillColor: Theme.of(context).brightness == Brightness.dark ? Colors.grey[800] : Colors.grey[200],
               ),
-              keyboardType: TextInputType.number,
+              child: Text(
+                _precioController.text.isEmpty 
+                    ? '0.00' 
+                    : double.tryParse(_precioController.text)?.toStringAsFixed(2) ?? '0.00',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             ),
             const SizedBox(height: 16),
             GestureDetector(
@@ -275,6 +295,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            // El plan siempre es editable (tanto para nuevo como para editar)
             DropdownButtonFormField<String>(
               value: _opcionesPlan.contains(_tipoPlan) ? _tipoPlan : (_opcionesPlan.isNotEmpty ? _opcionesPlan.first : null),
               decoration: InputDecoration(
@@ -293,6 +314,14 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
                 if (value != null && _opcionesPlan.contains(value)) {
                   setState(() {
                     _tipoPlan = value;
+                    // Actualizar el precio automáticamente según el plan seleccionado
+                    if (_planesActivos.isNotEmpty) {
+                      final planSeleccionado = _planesActivos.firstWhere(
+                        (p) => p.nombre == value,
+                        orElse: () => _planesActivos.first,
+                      );
+                      _precioController.text = planSeleccionado.precio.toStringAsFixed(2);
+                    }
                   });
                 }
               },

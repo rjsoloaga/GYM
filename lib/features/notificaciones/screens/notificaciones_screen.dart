@@ -1,9 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gym/features/notificaciones/services/notificacion_service.dart';
-import 'package:gym/features/socios/models/socio.dart';
-import 'package:gym/features/socios/bloc/socios_bloc.dart';
+// imports limpiados: eliminar referencias no usadas
 import 'package:gym/core/database/database_helper.dart';
-import 'package:gym/features/socios/screens/agregar_socio_screen.dart';
+// import 'package:gym/features/socios/screens/agregar_socio_screen.dart'; // no usado
 
 class NotificacionesScreen extends StatefulWidget {
   const NotificacionesScreen({Key? key}) : super(key: key);
@@ -13,7 +13,7 @@ class NotificacionesScreen extends StatefulWidget {
 }
 
 class _NotificacionesScreenState extends State<NotificacionesScreen> {
-  final DatabaseHelper _databaseHelper = DatabaseHelper();
+  final DatabaseHelper _databaseHelper = DatabaseHelper.instance;
   late StreamSubscription<Map<String, dynamic>> _suscripcion;
 
   @override

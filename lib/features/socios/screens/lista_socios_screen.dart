@@ -565,10 +565,10 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
   }
   */
 
-  // Ordenar socios por estado (Vencido > Por vencer > Al día) y luego alfabéticamente
+  // Ordenar socios por estado (Vencido > Por Vencer > Al Día) y luego alfabéticamente
   List<Socio> _ordenarSocios(List<Socio> socios) {
-    // Orden de prioridad de estados
-    final ordenEstado = {'Vencido': 1, 'Por vencer': 2, 'Al día': 3};
+    // Orden de prioridad de estados (deudores primero, por vencer medio, al día últimos)
+    final ordenEstado = {'Vencido': 1, 'Por Vencer': 2, 'Al Día': 3};
     
     socios.sort((a, b) {
       // Primero por estado

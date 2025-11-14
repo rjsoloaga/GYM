@@ -1,6 +1,5 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:gym/core/database/database_helper.dart';
 
 Future<void> main() async {
   try {

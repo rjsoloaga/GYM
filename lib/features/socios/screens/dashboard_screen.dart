@@ -54,6 +54,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'fecha_actual': ahora,
       // mantenemos compatibilidad si en otro lugar se usa la antigua
       'ingresosMensuales': ingresosDiarios,
+      'vencidas': cuotasVencidas, // Clave correcta para la UI
+      'por_vencer': cuotasPorVencer, // Clave correcta para la UI
       'cuotasVencidas': cuotasVencidas,
       'cuotasPorVencer': cuotasPorVencer,
       'sociosPorVencer': sociosPorVencer,

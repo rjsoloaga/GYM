@@ -29,9 +29,11 @@ class SociosBloc extends Bloc<SocioEvent, SociosState> {
 
     try {
       final socios = await databaseHelper.getSocios();
+      // Filtrar socios pendientes de aprobación - solo mostrar los aprobados
+      final sociosAprobados = socios.where((socio) => !socio.pendienteAprobacion).toList();
       emit(SociosCargadosState(
-        todosLosSocios: socios,
-        sociosFiltrados: socios,
+        todosLosSocios: sociosAprobados,
+        sociosFiltrados: sociosAprobados,
         textoBusqueda: '',
       )); //Emitir esado con datos
     } catch (e) {

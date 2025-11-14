@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -164,11 +165,11 @@ class ComprobanteService {
       
       await file.writeAsBytes(await pdf.save());
       
-      print('✅ Comprobante generado: ${file.path}');
+      debugPrint('✅ Comprobante generado: ${file.path}');
       return file;
       
     } catch (e) {
-      print('❌ Error generando comprobante PDF: $e');
+      debugPrint('❌ Error generando comprobante PDF: $e');
       return null;
     }
   }
@@ -182,7 +183,7 @@ class ComprobanteService {
       }
       return null;
     } catch (e) {
-      print('❌ Error leyendo comprobante: $e');
+      debugPrint('❌ Error leyendo comprobante: $e');
       return null;
     }
   }
@@ -193,12 +194,12 @@ class ComprobanteService {
       final file = File(filePath);
       if (await file.exists()) {
         await file.delete();
-        print('✅ Comprobante eliminado: $filePath');
+        debugPrint('✅ Comprobante eliminado: $filePath');
         return true;
       }
       return false;
     } catch (e) {
-      print('❌ Error eliminando comprobante: $e');
+      debugPrint('❌ Error eliminando comprobante: $e');
       return false;
     }
   }

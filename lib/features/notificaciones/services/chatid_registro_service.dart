@@ -238,7 +238,7 @@ Para recibir notificaciones por Telegram:
 
     ✅ *Estado:* Activo
     📅 *Plan:* ${socio.tipoPlan}
-    💰 *Precio:* \$${socio.precioMensual?.toStringAsFixed(2) ?? '0.00'}
+    💰 *Precio:* \$${socio.precioMensual.toStringAsFixed(2)}
     📱 *Próximo pago:* ${socio.fechaVencimiento.day}/${socio.fechaVencimiento.month}/${socio.fechaVencimiento.year}
 
     ¡Bienvenido al gym!

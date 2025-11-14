@@ -187,12 +187,12 @@ class DatabaseHelper {
             
             if (!hasPlanId) {
               await db.execute('ALTER TABLE socios ADD COLUMN planId INTEGER');
-              print('✅ Columna planId añadida a la tabla socios');
+              debugPrint('✅ Columna planId añadida a la tabla socios');
             } else {
-              print('ℹ️ La columna planId ya existe en la tabla socios');
+              debugPrint('ℹ️ La columna planId ya existe en la tabla socios');
             }
           } catch (e) {
-            print('❌ Error al agregar planId a socios: $e');
+            debugPrint('❌ Error al agregar planId a socios: $e');
             // Continuar con la migración incluso si hay un error
           }
         }
@@ -393,28 +393,28 @@ class DatabaseHelper {
     final query = 'SELECT * FROM planes $where $orderBy';
     
     if (kDebugMode) {
-      print('🔍 [DatabaseHelper] Ejecutando consulta de planes:');
-      print('   ├─ Query: $query');
-      print('   └─ soloActivos: $soloActivos');
+      debugPrint('🔍 [DatabaseHelper] Ejecutando consulta de planes:');
+      debugPrint('   ├─ Query: $query');
+      debugPrint('   └─ soloActivos: $soloActivos');
     }
     
     try {
       final result = await db.rawQuery(query);
       
       if (kDebugMode) {
-        print('✅ [DatabaseHelper] Se encontraron ${result.length} planes');
+        debugPrint('✅ [DatabaseHelper] Se encontraron ${result.length} planes');
         if (result.isEmpty) {
           // Verificar si hay planes en la base de datos
           final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM planes'));
-          print('   ℹ️  Total de planes en la base de datos: $count');
+          debugPrint('   ℹ️  Total de planes en la base de datos: $count');
           final countActivos = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM planes WHERE activo = 1'));
-          print('   ℹ️  Planes activos: $countActivos');
+          debugPrint('   ℹ️  Planes activos: $countActivos');
         }
       }
       
       return result.map((map) => Plan.fromMap(map)).toList();
     } catch (e) {
-      print('❌ [DatabaseHelper] Error al obtener planes: $e');
+      debugPrint('❌ [DatabaseHelper] Error al obtener planes: $e');
       rethrow;
     }
   }

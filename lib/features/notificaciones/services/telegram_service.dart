@@ -76,7 +76,7 @@ class TelegramService {
   static Future<void> _procesarMensaje(dynamic update) async {
     final message = update['message'];
     if (message != null) {
-      final text = message['text']?.toString()?.trim() ?? '';
+      final text = message['text']?.toString().trim() ?? '';
       final chatId = message['chat']['id'].toString();
       final from = message['from'];
       final nombre = from['first_name'] ?? 'Usuario';

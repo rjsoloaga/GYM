@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:gym/features/notificaciones/services/telegram_service.dart';
 
 class BackgroundService {

@@ -14,7 +14,6 @@ import 'package:gym/services/background_service.dart';
 // Tus imports
 import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/bloc/socios_bloc.dart';
-import 'package:gym/features/socios/screens/emergency_reset_screen.dart';
 
 // Autenticación
 import 'package:gym/features/socios/bloc/auth_bloc.dart';

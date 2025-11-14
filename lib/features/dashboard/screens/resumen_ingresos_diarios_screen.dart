@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gym/core/database/database_helper.dart';
 import 'package:intl/intl.dart';
-import 'package:gym/features/auth/models/usuario.dart';
 
 class ResumenIngresosDiariosScreen extends StatefulWidget {
   final DateTime? fecha;

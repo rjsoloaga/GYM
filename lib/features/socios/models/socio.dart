@@ -1,4 +1,3 @@
-import 'package:intl/intl.dart';
 class Socio {
   final int? id;
   final String nombreCompleto;
