@@ -70,28 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Título
-                  Row(
-                    children: [
-                      const Icon(Icons.dashboard, color: Colors.white, size: 28),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Dashboard',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.refresh, color: Colors.white),
-                        onPressed: _cargarEstadisticas,
-                        tooltip: 'Actualizar',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
 
                   // Tarjetas de métricas
                   FutureBuilder<Map<String, dynamic>>(

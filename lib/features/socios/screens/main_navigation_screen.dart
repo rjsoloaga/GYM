@@ -12,6 +12,7 @@ import 'package:gym/features/socios/models/socio.dart';
 import 'package:gym/features/dashboard/screens/admin_reportes_screen.dart';
 import 'package:gym/features/auth/models/usuario.dart';
 import 'package:gym/features/planes/screens/planes_list_screen.dart';
+import 'package:intl/intl.dart';
 
 
 class MainNavigationScreen extends StatefulWidget {
@@ -130,6 +131,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     tooltip: 'Cerrar sesión',
                   ),
                 ],
+                bottom: _buildInfoBar(context, authState),
               ),
               body: const ListaSociosScreen(),
             ),
@@ -163,6 +165,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     tooltip: 'Cerrar sesión',
                   ),
                 ],
+                bottom: _buildInfoBar(context, authState),
               ),
               body: const DashboardScreen(),
             ),
@@ -288,6 +291,36 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
     
     context.read<SociosBloc>().add(CargarSociosEvent());
+  }
+
+  PreferredSizeWidget _buildInfoBar(BuildContext context, AuthState authState) {
+    String nombre = '';
+    String rol = '';
+    if (authState is AuthSuccess) {
+      final usuario = authState.usuario;
+      if (usuario != null) {
+        nombre = usuario.nombre;
+        rol = usuario.rol;
+      }
+    } else if (authState is AuthAuthenticatedState) {
+      final user = authState.user;
+      if (user is Map) {
+        nombre = (user['nombre'] ?? user['username'] ?? '').toString();
+        rol = (user['rol'] ?? '').toString();
+      }
+    }
+    final fechaHora = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(24),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        child: Text(
+          'Operador: $nombre ($rol) • $fechaHora',
+          style: const TextStyle(fontSize: 12, color: Colors.white70),
+        ),
+      ),
+    );
   }
 
   Widget _buildDrawer(BuildContext context) {
