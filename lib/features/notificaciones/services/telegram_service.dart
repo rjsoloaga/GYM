@@ -213,6 +213,18 @@ class TelegramService {
             );
           }
         }
+        else {
+          // Fallback: mensaje fuera de flujo o después de reiniciar la app
+          final contieneNumeros = RegExp(r'\d{6,}').hasMatch(text);
+          final ayudaTelefono = contieneNumeros
+              ? '\n\nDetecté un número. Para registrarte correctamente, envía /start y seguí los pasos.'
+              : '';
+          await sendMessage(
+            chatId: chatId,
+            message: '👋 Hola $nombre\n\nPara iniciar o retomar tu registro, envía /start y seguí las indicaciones.'
+                    '$ayudaTelefono',
+          );
+        }
       }
     }
   }

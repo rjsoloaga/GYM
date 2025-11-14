@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gym/features/socios/bloc/socios_bloc.dart';
 import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import 'package:gym/features/socios/screens/lista_socios_screen.dart';
@@ -64,136 +66,148 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: RefreshIndicator(
             onRefresh: () async => _cargarEstadisticas(),
             color: const Color(0xFF2196F3),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 8),
+            child: BlocBuilder<SociosBloc, SociosState>(
+              builder: (context, sociosState) {
+                return SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
 
-                  // Tarjetas de métricas
-                  FutureBuilder<Map<String, dynamic>>(
-                    future: _estadisticasFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                      FutureBuilder<Map<String, dynamic>>(
+                        future: _estadisticasFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
 
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Text('Error: ${snapshot.error}',
-                              style: const TextStyle(color: Colors.red)),
-                        );
-                      }
+                          if (snapshot.hasError) {
+                            return Center(
+                              child: Text('Error: ${snapshot.error}',
+                                  style: const TextStyle(color: Colors.red)),
+                            );
+                          }
 
-                      final stats = snapshot.data!;
+                          final stats = snapshot.data ?? {};
+                          final vencidas = stats['vencidas'] ?? 0;
+                          final por_vencer = stats['por_vencer'] ?? 0;
+                          final al_dia = stats['al_dia'] ?? 0;
+                          final ingresos = (stats['ingresos_diarios'] ?? 0.0) as double;
+                          final fecha = stats['fecha_actual'] as DateTime?;
+                          int total = stats['total'] ?? 0;
+                          if (sociosState is SociosCargadosState) {
+                            total = sociosState.todosLosSocios.length;
+                          }
 
-                      return Column(
-                        children: [
-                          // Grid de métricas
-                          Row(
+                          return Column(
                             children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const ListaSociosScreen(),
+                              // Grid de métricas
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const ListaSociosScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: _buildMetricCard(
+                                        'Total Socios',
+                                        total.toString(),
+                                        Icons.people,
+                                        const Color(0xFF2196F3),
                                       ),
-                                    );
-                                  },
-                                  child: _buildMetricCard(
-                                    'Total Socios',
-                                    stats['totalSocios'].toString(),
-                                    Icons.people,
-                                    const Color(0xFF2196F3),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const ResumenIngresosDiariosScreen(),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const ResumenIngresosDiariosScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: _buildMetricCard(
+                                        'Ingresos Diarios',
+                                        '\$${_formatNumber(ingresos)}',
+                                        Icons.attach_money,
+                                        Theme.of(context).colorScheme.primary,
                                       ),
-                                    );
-                                  },
-                                  child: _buildMetricCard(
-                                    'Ingresos Diarios',
-                                    '\$${_formatNumber(stats['ingresosMensuales'] as double)}',
-                                    Icons.attach_money,
-                                    Theme.of(context).colorScheme.primary,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ListaSociosScreen(
-                                          filtroVencidos: true,
-                                        ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ListaSociosScreen(
+                                              filtroVencidos: true,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: _buildMetricCard(
+                                        'Cuotas Vencidas',
+                                        vencidas.toString(),
+                                        Icons.error,
+                                        const Color(0xFFCF6679),
                                       ),
-                                    );
-                                  },
-                                  child: _buildMetricCard(
-                                    'Cuotas Vencidas',
-                                    stats['cuotasVencidas'].toString(),
-                                    Icons.error,
-                                    const Color(0xFFCF6679),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ListaSociosScreen(
-                                          filtroPorVencer: true,
-                                        ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ListaSociosScreen(
+                                              filtroPorVencer: true,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: _buildMetricCard(
+                                        'Por Vencer (7 días)',
+                                        por_vencer.toString(),
+                                        Icons.warning,
+                                        Colors.amber,
                                       ),
-                                    );
-                                  },
-                                  child: _buildMetricCard(
-                                    'Por Vencer (7 días)',
-                                    stats['cuotasPorVencer'].toString(),
-                                    Icons.warning,
-                                    Colors.amber,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
+                              const SizedBox(height: 24),
 
-                          // Recordatorios
-                          if (stats['sociosPorVencer'].length > 0 ||
-                              stats['sociosVencidos'].length > 0)
-                            _buildRecordatoriosSection(
-                              stats['sociosPorVencer'],
-                              stats['sociosVencidos'],
-                            ),
-                        ],
-                      );
-                    },
+                              // Recordatorios
+                              if (stats['sociosPorVencer'].length > 0 ||
+                                  stats['sociosVencidos'].length > 0)
+                                _buildRecordatoriosSection(
+                                  stats['sociosPorVencer'],
+                                  stats['sociosVencidos'],
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ),

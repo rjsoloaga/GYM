@@ -56,7 +56,15 @@ class SocioCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color estadoColor = _getColorByEstado();
     final IconData estadoIcon = _getIconByEstado();
-    final int dias = socio.fechaVencimiento.difference(DateTime.now()).inDays;
+    // Usar sólo la parte de fecha para evitar errores por la hora del día
+    final ahora = DateTime.now();
+    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
+    final venc = DateTime(
+      socio.fechaVencimiento.year,
+      socio.fechaVencimiento.month,
+      socio.fechaVencimiento.day,
+    );
+    final int dias = venc.difference(hoy).inDays;
     final String diasTexto = dias < 0
         ? 'Vencida hace ${-dias} días'
         : dias == 0

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym/features/socios/bloc/auth_bloc.dart';
 import 'package:gym/features/socios/bloc/socios_bloc.dart';
@@ -27,6 +28,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final Stream<List<Socio>> _sociosPendientesBroadcast;
   int _dashboardRefreshKey = 0; // fuerza recreación del dashboard
+  Timer? _clockTimer;
+  Timer? _clockAlignTimer;
 
   void _logout(BuildContext context) {
     showDialog(
@@ -63,6 +66,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
+  void _startClockTimer() {
+    _clockTimer?.cancel();
+    _clockAlignTimer?.cancel();
+    final now = DateTime.now();
+    final nextMinute = DateTime(now.year, now.month, now.day, now.hour, now.minute).add(const Duration(minutes: 1));
+    final initialDelay = nextMinute.difference(now);
+    _clockAlignTimer = Timer(initialDelay, () {
+      if (!mounted) return;
+      setState(() {});
+      _clockTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _clockTimer?.cancel();
+    _clockAlignTimer?.cancel();
+    super.dispose();
+  }
+
   Stream<List<Socio>> _sociosPendientesStream() async* {
     while (true) {
       try {
@@ -82,6 +107,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     // Crear un stream broadcast para evitar que múltiples listeners (al abrir/cerrar drawer
     // y al reconstruir la UI) intenten suscribirse al mismo stream de una sola suscripción.
     _sociosPendientesBroadcast = _sociosPendientesStream().asBroadcastStream();
+    // Refrescar inmediatamente y alinear al inicio del minuto
+    setState(() {});
+    _startClockTimer();
   }
 
   @override
