@@ -76,12 +76,10 @@ include(flutter/generated_plugins.cmake)
 
 
 # === Installation ===
-# By default, "installing" just makes a relocatable bundle in the build
-# directory.
+# By default, "installing" just makes a relocatable bundle in the build directory.
 set(BUILD_BUNDLE_DIR "${PROJECT_BINARY_DIR}/bundle")
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
-endif()
+# Force installation prefix to the bundle directory (user-writable)
+set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "Installation prefix" FORCE)
 
 # Start with a clean build bundle directory every time.
 install(CODE "
@@ -108,6 +106,10 @@ endforeach(bundled_library)
 
 # Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/linux/")
+# Ensure the native assets directory exists (required for debug builds)
+if(NOT EXISTS "${NATIVE_ASSETS_DIR}")
+  file(MAKE_DIRECTORY "${NATIVE_ASSETS_DIR}")
+endif()
 install(DIRECTORY "${NATIVE_ASSETS_DIR}"
    DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
    COMPONENT Runtime)
@@ -126,3 +128,15 @@ if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime)
 endif()
+
+# Copy the native assets provided by the build.dart from all packages.
+set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/linux/")
+
+# Ensure the native assets directory exists (required for debug builds)
+if(NOT EXISTS "${NATIVE_ASSETS_DIR}")
+  file(MAKE_DIRECTORY "${NATIVE_ASSETS_DIR}")
+endif()
+
+install(DIRECTORY "${NATIVE_ASSETS_DIR}"
+  DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
+  COMPONENT Runtime)

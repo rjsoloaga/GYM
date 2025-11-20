@@ -6,6 +6,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:sqflite/sqflite.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 // Servicios
 import 'package:gym/services/notification_service.dart';
@@ -34,7 +35,9 @@ import 'package:gym/features/planes/models/plan.dart';
 import 'package:gym/features/planes/screens/planes_list_screen.dart';
 import 'package:gym/features/planes/screens/plan_form_screen.dart';
 
+
 Future<void> main() async {
+  sqfliteFfiInit();
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inicializar servicios
@@ -53,7 +56,11 @@ Future<void> main() async {
   };
 
   if (kIsWeb) {
+    // Para WEB
     databaseFactory = databaseFactoryFfiWeb;
+  } else {
+    // Para Escritorio (Linux, Windows, Mac)
+    databaseFactory = databaseFactoryFfi;
   }
 
   // Inicializar la base de datos

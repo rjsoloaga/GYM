@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications_linux/flutter_local_notifications_linux.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 class NotificationService {
@@ -21,6 +22,10 @@ class NotificationService {
     final InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
+      linux: LinuxInitializationSettings(
+        defaultActionName: 'Abrir',
+        defaultIcon: AssetsLinuxIcon('assets/icon.png'),
+      ),
     );
 
     // Inicializar el plugin de notificaciones
