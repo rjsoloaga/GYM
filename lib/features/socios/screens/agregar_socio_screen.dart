@@ -174,6 +174,34 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     );
 
     if (fechaSeleccionada != null) {
+      // Validar fechas
+      if (esFechaInicio) {
+        // Si la nueva fecha de inicio es posterior a la fecha de vencimiento actual
+        if (fechaSeleccionada.isAfter(_fechaVencimiento)) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('La fecha de inicio no puede ser posterior a la fecha de vencimiento'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+      } else {
+        // Si la nueva fecha de vencimiento es anterior a la fecha de inicio actual
+        if (fechaSeleccionada.isBefore(_fechaInicio)) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('La fecha de vencimiento no puede ser anterior a la fecha de inicio. Modifique primero la fecha de inicio si es necesario.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
+          );
+          return;
+        }
+      }
+      
       setState(() {
         if (esFechaInicio) {
           _fechaInicio = fechaSeleccionada;

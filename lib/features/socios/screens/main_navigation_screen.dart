@@ -13,6 +13,8 @@ import 'package:gym/features/socios/models/socio.dart';
 import 'package:gym/features/dashboard/screens/admin_reportes_screen.dart';
 import 'package:gym/features/auth/models/usuario.dart';
 import 'package:gym/features/planes/screens/planes_list_screen.dart';
+import 'package:gym/features/socios/screens/lista_socios_inactivos_screen.dart';
+import 'package:gym/features/asistencia/screens/registro_asistencia_screen.dart';
 import 'package:intl/intl.dart';
 
 
@@ -180,7 +182,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       setState(() {
                         _dashboardRefreshKey++; // Forzar recálculo de estadísticas
                       });
-                      _procesarRegistrosTelegram(context);
                     },
                     tooltip: 'Actualizar',
                   ),
@@ -201,6 +202,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
               body: DashboardScreen(key: ValueKey<int>(_dashboardRefreshKey)),
             ),
+            // Pantalla de Asistencia
+            const RegistroAsistenciaScreen(),
           ];
 
           return BlocListener<SociosBloc, SociosState>(
@@ -249,6 +252,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     BottomNavigationBarItem(
                       icon: Icon(Icons.dashboard),
                       label: 'Dashboard',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.login),
+                      label: 'Asistencia',
                     ),
                   ],
                 ),
@@ -350,7 +357,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     } else if (authState is AuthAuthenticatedState) {
       final user = authState.user;
       if (user is Map) {
-        nombre = (user['nombre'] ?? user['username'] ?? '').toString();
+        nombre = (user['nombreCompleto'] ?? user['nombre'] ?? '').toString();
         rol = (user['rol'] ?? '').toString();
       }
     }
@@ -361,7 +368,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: Text(
-          'Operador: $nombre ($rol) • $fechaHora',
+          '$nombre: $rol • $fechaHora',
           style: const TextStyle(fontSize: 12, color: Colors.white70),
         ),
       ),
@@ -478,6 +485,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             },
           ),
           
+          // NUEVO: Registro de Asistencia
+          ListTile(
+            leading: const Icon(Icons.login, color: Colors.green),
+            title: const Text('Registro de Asistencia'),
+            subtitle: const Text('Control de ingreso al gimnasio'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const RegistroAsistenciaScreen()),
+              );
+            },
+          ),
+          
           // ITEM EXISTENTE: Dashboard
           ListTile(
             leading: Icon(Icons.dashboard, color: Colors.green),
@@ -554,6 +575,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         context,
                         MaterialPageRoute(builder: (context) => const PlanesListScreen()),
                       );
+                    },
+                  ),
+                  const Divider(color: Colors.white24),
+                  ListTile(
+                    leading: const Icon(Icons.person_off, color: Colors.white70),
+                    title: const Text('Socios Inactivos', style: TextStyle(color: Colors.white)),
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ListaSociosInactivosScreen()),
+                      );
+                      // Al volver, recargar socios activos
+                      if (mounted) {
+                        context.read<SociosBloc>().add(CargarSociosEvent());
+                      }
                     },
                   ),
                 ],

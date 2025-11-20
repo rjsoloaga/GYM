@@ -82,7 +82,16 @@ class _ResumenIngresosDiariosScreenState extends State<ResumenIngresosDiariosScr
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            color: Colors.green[50],
+            decoration: BoxDecoration(
+              color: Colors.green[700],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -91,11 +100,11 @@ class _ResumenIngresosDiariosScreenState extends State<ResumenIngresosDiariosScr
                   children: [
                     const Text(
                       'Fecha:',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(fontSize: 12, color: Colors.white70),
                     ),
                     Text(
                       _formatearFecha(_fechaSeleccionada),
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ],
                 ),
@@ -103,6 +112,10 @@ class _ResumenIngresosDiariosScreenState extends State<ResumenIngresosDiariosScr
                   onPressed: _cambiarFecha,
                   icon: const Icon(Icons.calendar_today),
                   label: const Text('Cambiar Fecha'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.green[700],
+                  ),
                 )
               ],
             ),
@@ -421,7 +434,7 @@ class _ResumenIngresosDiariosScreenState extends State<ResumenIngresosDiariosScr
                                         Icon(Icons.person_outline, size: 14, color: Colors.grey[500]),
                                         const SizedBox(width: 4),
                                         Text(
-                                          pago['usuarioNombre']?.toString() ?? 'Sistema',
+                                          pago['usuarioNombre']?.toString() ?? 'Sin usuario',
                                           style: TextStyle(
                                             color: Colors.grey[600],
                                             fontSize: 12,

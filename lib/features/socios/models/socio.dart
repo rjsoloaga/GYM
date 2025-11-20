@@ -12,7 +12,8 @@ class Socio {
   final bool pendienteAprobacion;
   final DateTime? fechaRegistroTelegram;
   final int? usuarioId;
-  final int? planId; // Nuevo campo para la relación con Plan
+  final int? planId;
+  final bool activo; // Nuevo campo para baja lógica
 
   Socio({
     this.id,
@@ -29,6 +30,7 @@ class Socio {
     this.fechaRegistroTelegram,
     this.usuarioId,
     this.planId,
+    this.activo = true,
   });
 
   String get estadoCuota {
@@ -95,6 +97,7 @@ class Socio {
     DateTime? fechaRegistroTelegram,
     int? usuarioId,
     int? planId,
+    bool? activo,
   }) {
     return Socio(
       id: id ?? this.id,
@@ -111,6 +114,7 @@ class Socio {
       fechaRegistroTelegram: fechaRegistroTelegram ?? this.fechaRegistroTelegram,
       usuarioId: usuarioId ?? this.usuarioId,
       planId: planId ?? this.planId,
+      activo: activo ?? this.activo,
     );
   }
 
@@ -129,7 +133,8 @@ class Socio {
       'pendienteAprobacion': pendienteAprobacion ? 1 : 0,
       'fechaRegistroTelegram': fechaRegistroTelegram?.toIso8601String(),
       'usuarioId': usuarioId,
-      'planId': planId, // Nuevo campo
+      'planId': planId,
+      'activo': activo ? 1 : 0,
     };
   }
 
@@ -151,6 +156,7 @@ class Socio {
           : null,
       usuarioId: map['usuarioId'] as int?,
       planId: map['planId'] as int?,
+      activo: (map['activo'] as int?) != 0, // Default true si es null o 1
     );
   }
 }

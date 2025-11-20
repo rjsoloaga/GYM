@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/screens/lista_socios_screen.dart';
 import 'package:gym/features/dashboard/screens/resumen_ingresos_diarios_screen.dart';
+import 'package:gym/features/asistencia/screens/registro_asistencia_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -50,6 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
       
       final ingresos_diarios = await db.getIngresosDiarios(now);
+      final asistencias_hoy = await db.getAsistenciasHoy();
       
       return {
         'vencidas': vencidas,
@@ -57,6 +59,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'al_dia': al_dia,
         'total': socios.length,
         'ingresos_diarios': ingresos_diarios,
+        'asistencias_hoy': asistencias_hoy,
         'fecha_actual': now,
       };
     } catch (e) {
@@ -150,6 +153,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final por_vencer = stats['por_vencer'] ?? 0;
           final al_dia = stats['al_dia'] ?? 0;
           final ingresos = (stats['ingresos_diarios'] ?? 0.0) as double;
+          final asistencias = stats['asistencias_hoy'] ?? 0;
           final fecha = stats['fecha_actual'] as DateTime?;
           final total = stats['total'] ?? 0;
 
@@ -175,6 +179,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       physics: const NeverScrollableScrollPhysics(),
                       childAspectRatio: 1.0,
                       children: [
+                        _buildCard('Total Socios', total.toString(), Icons.group, Colors.blue, () => _navigateWithFilter('todos')),
+                        _buildCard('Asistencias Hoy', asistencias.toString(), Icons.login, Colors.teal, () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const RegistroAsistenciaScreen()),
+                          );
+                        }),
                         _buildCard('Vencidas', vencidas.toString(), Icons.warning_amber_rounded, Colors.red, () => _navigateWithFilter('vencidos')),
                         _buildCard('Por Vencer', por_vencer.toString(), Icons.schedule, Colors.orange, () => _navigateWithFilter('por_vencer')),
                         _buildCard('Al Día', al_dia.toString(), Icons.check_circle, Colors.green, () => _navigateWithFilter('todos')),

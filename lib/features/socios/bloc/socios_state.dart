@@ -22,3 +22,8 @@ class SociosErrorState extends SociosState {
   final String error;
   SociosErrorState(this.error);
 }
+
+class SociosInactivosCargadosState extends SociosState {
+  final List<Socio> sociosInactivos;
+  SociosInactivosCargadosState(this.sociosInactivos);
+}

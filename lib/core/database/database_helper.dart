@@ -50,7 +50,7 @@ class DatabaseHelper {
     // ⚠️ INCREMENTA LA VERSIÓN para crear nuevas tablas
     return await openDatabase(
       path,
-      version: 9, // Incrementado a 9 para agregar tiempoIndeterminado a planes
+      version: 10, // Incrementado a 10 para agregar activo a socios
       onCreate: (db, version) async {
         // Crear tabla de usuarios primero
         await db.execute(_createUsuariosTableSql);
@@ -60,6 +60,8 @@ class DatabaseHelper {
         await db.execute(_createPagosTableSql);
         // Crear tabla de planes
         await db.execute(_createPlanesTableSql);
+        // Crear tabla de asistencias
+        await db.execute(_createAsistenciasTableSql);
 
         // Seed de admin para login de desarrollo
         await _crearUsuarioAdmin(db);
@@ -72,6 +74,10 @@ class DatabaseHelper {
         await db.execute(_createSociosTableIfNotExistsSql);
         await db.execute(_createPagosTableIfNotExistsSql);
         await db.execute(_createPlanesTableIfNotExistsSql);
+        await db.execute(_createAsistenciasTableIfNotExistsSql);
+        
+        // CORRECCIÓN: Asegurar que los socios existentes tengan activo = 1
+        await db.rawUpdate('UPDATE socios SET activo = 1 WHERE activo IS NULL');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         // Migración desde versión 2 a 3
@@ -196,6 +202,25 @@ class DatabaseHelper {
             // Continuar con la migración incluso si hay un error
           }
         }
+
+        
+        // Migración a la versión 10 - Añadir activo a socios
+        if (oldVersion <= 9) {
+          try {
+            // Verificar si la columna ya existe
+            final result = await db.rawQuery('PRAGMA table_info(socios)');
+            final hasActivo = result.any((column) => column['name'] == 'activo');
+            
+            if (!hasActivo) {
+              await db.execute('ALTER TABLE socios ADD COLUMN activo INTEGER DEFAULT 1');
+              debugPrint('✅ Columna activo añadida a la tabla socios');
+            } else {
+              debugPrint('ℹ️ La columna activo ya existe en la tabla socios');
+            }
+          } catch (e) {
+            debugPrint('❌ Error al agregar activo a socios: $e');
+          }
+        }
       },
     );
   }
@@ -296,6 +321,27 @@ class DatabaseHelper {
       method TEXT NOT NULL,
       FOREIGN KEY (socioId) REFERENCES socios(id) ON DELETE CASCADE,
       FOREIGN KEY (usuarioId) REFERENCES usuarios(id) ON DELETE SET NULL
+    )
+  ''';
+
+  // NUEVO: SQL para tabla de asistencias
+  static const String _createAsistenciasTableSql = '''
+    CREATE TABLE asistencias (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      socioId INTEGER NOT NULL,
+      fechaHora TEXT NOT NULL,
+      estadoCuota TEXT NOT NULL,
+      FOREIGN KEY (socioId) REFERENCES socios(id) ON DELETE CASCADE
+    )
+  ''';
+
+  static const String _createAsistenciasTableIfNotExistsSql = '''
+    CREATE TABLE IF NOT EXISTS asistencias (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      socioId INTEGER NOT NULL,
+      fechaHora TEXT NOT NULL,
+      estadoCuota TEXT NOT NULL,
+      FOREIGN KEY (socioId) REFERENCES socios(id) ON DELETE CASCADE
     )
   ''';
 
@@ -541,9 +587,30 @@ class DatabaseHelper {
   }
 
   Future<List<Socio>> getSocios() async {
-    Database db = await instance.database;
-    final List<Map<String, dynamic>> maps = await db.query('socios');
-    return List.generate(maps.length, (i) => Socio.fromMap(maps[i]));
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'socios',
+      where: 'activo = ?',
+      whereArgs: [1],
+    );
+
+    return List.generate(maps.length, (i) {
+      return Socio.fromMap(maps[i]);
+    });
+  }
+
+  // NUEVO: Obtener socios inactivos
+  Future<List<Socio>> getSociosInactivos() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'socios',
+      where: 'activo = ?',
+      whereArgs: [0],
+    );
+
+    return List.generate(maps.length, (i) {
+      return Socio.fromMap(maps[i]);
+    });
   }
 
   // Obtener socios pendientes de aprobación
@@ -578,13 +645,28 @@ class DatabaseHelper {
     return result.map((map) => Socio.fromMap(map)).toList();
   }
 
-  Future<int> deleteSocio(int id) async {
-    Database db = await instance.database;
-    return await db.delete(
+  // MODIFICADO: Soft delete (baja lógica) con auditoría
+  Future<void> deleteSocio(int id, {int? usuarioId, String? usuarioNombre}) async {
+    final db = await database;
+    await db.update(
       'socios',
+      {'activo': 0},
       where: 'id = ?',
       whereArgs: [id],
     );
+    debugPrint('🗑️ Socio ID:$id desactivado por usuario ID:$usuarioId ($usuarioNombre)');
+  }
+
+  // NUEVO: Reactivar socio con auditoría
+  Future<void> reactivarSocio(int id, {int? usuarioId, String? usuarioNombre}) async {
+    final db = await database;
+    await db.update(
+      'socios',
+      {'activo': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    debugPrint('♻️ Socio ID:$id reactivado por usuario ID:$usuarioId ($usuarioNombre)');
   }
 
   Future<double> getIngresosMensuales() async {
@@ -728,4 +810,59 @@ class DatabaseHelper {
     ''', [inicioDelDia.toIso8601String(), finDelDia.toIso8601String()]);
   }
 
+  // --- MÉTODOS PARA ASISTENCIAS ---
+
+  // Buscar socio por DNI
+  Future<Socio?> getSocioPorDni(String dni) async {
+    final db = await database;
+    final result = await db.query(
+      'socios',
+      where: 'dni = ? AND activo = 1',
+      whereArgs: [dni],
+    );
+    return result.isNotEmpty ? Socio.fromMap(result.first) : null;
+  }
+
+  // Registrar asistencia
+  Future<int> registrarAsistencia(int socioId, String estadoCuota) async {
+    final db = await database;
+    return await db.insert('asistencias', {
+      'socioId': socioId,
+      'fechaHora': DateTime.now().toIso8601String(),
+      'estadoCuota': estadoCuota,
+    });
+  }
+
+  // Obtener asistencias del día
+  Future<int> getAsistenciasHoy() async {
+    final db = await database;
+    final now = DateTime.now();
+    final inicioDelDia = DateTime(now.year, now.month, now.day);
+    final finDelDia = inicioDelDia.add(const Duration(days: 1));
+
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) as count 
+      FROM asistencias 
+      WHERE fechaHora >= ? AND fechaHora < ?
+    ''', [inicioDelDia.toIso8601String(), finDelDia.toIso8601String()]);
+
+    return (result.first['count'] as num?)?.toInt() ?? 0;
+  }
+
+  // Obtener últimas asistencias
+  Future<List<Map<String, dynamic>>> getUltimasAsistencias({int limit = 10}) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT 
+        a.id,
+        a.fechaHora,
+        a.estadoCuota,
+        s.nombreCompleto as socioNombre,
+        s.dni as socioDni
+      FROM asistencias a
+      LEFT JOIN socios s ON a.socioId = s.id
+      ORDER BY a.fechaHora DESC
+      LIMIT ?
+    ''', [limit]);
+  }
 }

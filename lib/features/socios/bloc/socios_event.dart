@@ -23,3 +23,10 @@ class BuscarSociosEvent extends SocioEvent {
   final String texto;
   BuscarSociosEvent(this.texto);
 }
+
+class CargarSociosInactivosEvent extends SocioEvent {}
+
+class ReactivarSocioEvent extends SocioEvent {
+  final int id;
+  ReactivarSocioEvent(this.id);
+}

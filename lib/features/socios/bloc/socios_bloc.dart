@@ -18,6 +18,8 @@ class SociosBloc extends Bloc<SocioEvent, SociosState> {
     on<ActualizarSocioEvent>(_onActualizarSocio);
     on<EliminarSocioEvent>(_onEliminarSocio);
     on<BuscarSociosEvent>(_onBuscarSocios);
+    on<CargarSociosInactivosEvent>(_onCargarSociosInactivos);
+    on<ReactivarSocioEvent>(_onReactivarSocio);
   }
 
   // Funcion para carga de socios
@@ -123,5 +125,29 @@ class SociosBloc extends Bloc<SocioEvent, SociosState> {
     }
   }
 
-  
+  Future<void> _onCargarSociosInactivos(
+    CargarSociosInactivosEvent event,
+    Emitter<SociosState> emit,
+  ) async {
+    emit(SociosCargandoState());
+    try {
+      final sociosInactivos = await databaseHelper.getSociosInactivos();
+      emit(SociosInactivosCargadosState(sociosInactivos));
+    } catch (e) {
+      emit(SociosErrorState('Error al cargar socios inactivos: $e'));
+    }
+  }
+
+  Future<void> _onReactivarSocio(
+    ReactivarSocioEvent event,
+    Emitter<SociosState> emit,
+  ) async {
+    try {
+      await databaseHelper.reactivarSocio(event.id);
+      // Recargar la lista de inactivos para reflejar el cambio
+      add(CargarSociosInactivosEvent());
+    } catch (e) {
+      emit(SociosErrorState('Error al reactivar socio: $e'));
+    }
+  }
 }

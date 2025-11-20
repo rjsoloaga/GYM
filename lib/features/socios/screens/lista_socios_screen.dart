@@ -111,7 +111,7 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
               // Eliminar el socio
               context.read<SociosBloc>().add(EliminarSocioEvent(socio.id!));
@@ -125,7 +125,8 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
                 ),
               );
             },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -325,17 +326,50 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
     });
   }
 
-  void _pagarCuota(BuildContext context, Socio socio) {
+  void _pagarCuota(BuildContext context, Socio socio) async {
+    // 1. Diálogo de confirmación
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Pago'),
+        content: Text('¿Registrar pago de cuota para ${socio.nombreCompleto}?\n\nMonto: \$${socio.precioMensual}'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Confirmar Pago', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    if (!mounted) return;
+
     final messenger = ScaffoldMessenger.of(context);
-    final bloc = context.read<SociosBloc>(); // ← Guardar BLoC antes del async
-    final authBloc = context.read<AuthBloc>(); // ← Obtener usuario actual
+    final bloc = context.read<SociosBloc>();
+    final authBloc = context.read<AuthBloc>();
     
-    // Obtener ID y datos del usuario autenticado
+    // 2. Obtener ID y datos del usuario autenticado correctamente
     int? usuarioId;
     Usuario? usuarioActual;
-    if (authBloc.state is AuthSuccess) {
-      usuarioActual = (authBloc.state as AuthSuccess).usuario;
+    final authState = authBloc.state;
+
+    if (authState is AuthSuccess) {
+      usuarioActual = authState.usuario;
       usuarioId = usuarioActual?.id;
+    } else if (authState is AuthAuthenticatedState) {
+      // Si estamos en este estado, el usuario es un Map
+      final userMap = authState.user;
+      if (userMap is Map<String, dynamic>) {
+        usuarioActual = Usuario.fromMap(userMap);
+        usuarioId = usuarioActual.id;
+      }
     }
     
     // Mostrar loading
@@ -346,16 +380,14 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
       ),
     );
 
-    // Usar then sin problemas de contexto
+    // 3. Procesar pago
     PagoService.procesarPago(socio).then((pagoExitoso) async {
-      // Remover loading
       messenger.removeCurrentSnackBar();
       
       if (pagoExitoso) {
-        // Calcular y actualizar fecha
         final nuevaFecha = PagoService.calcularNuevaFechaVencimiento(socio);
         final socioActualizado = socio.copyWith(fechaVencimiento: nuevaFecha);
-        bloc.add(ActualizarSocioEvent(socioActualizado)); // ← Usar BLoC guardado
+        bloc.add(ActualizarSocioEvent(socioActualizado));
         
         // Registrar el pago en la BD con usuario que lo realizó
         try {
@@ -364,9 +396,9 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
             socio.precioMensual,
             DateTime.now(),
             'Efectivo',
-            usuarioId: usuarioId, // ← Registrar quién cobró
+            usuarioId: usuarioId, // Ahora sí debería tener valor
           );
-          debugPrint('✅ Pago registrado en BD para socio ID: ${socio.id}, por usuario ID: $usuarioId');
+          debugPrint('✅ Pago registrado en BD para socio ID: ${socio.id}, por usuario ID: $usuarioId (${usuarioActual?.nombreCompleto})');
 
           // Generar comprobante en PDF
           final archivoPDF = await ComprobanteService.generarComprobantePago(
@@ -735,6 +767,8 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
           final sociosFiltrados = _aplicarFiltro(state.sociosFiltrados);
           return _buildListaSocios(sociosFiltrados);
         } else {
+          // Para cualquier otro estado (incluyendo SociosInactivosCargadosState),
+          // simplemente mostrar mensaje de carga
           return const Center(child: Text('No hay socios cargados'));
         }
       },
