@@ -4,7 +4,7 @@ import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'dart:async';
 
 class RegistroAsistenciaScreen extends StatefulWidget {
@@ -22,6 +22,7 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
   String? _ultimoEstado;
   DateTime? _ultimaHora;
   bool _procesando = false;
+  final FlutterTts _flutterTts = FlutterTts();
   bool _sonidosHabilitados = true;
   Timer? _clearTimer;
 
@@ -29,10 +30,18 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
   void initState() {
     super.initState();
     _cargarPreferenciaSonidos();
+    _initTts();
     // Auto-focus en el campo de DNI
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
+  }
+
+  Future<void> _initTts() async {
+    await _flutterTts.setLanguage("es-ES");
+    await _flutterTts.setSpeechRate(0.5);
+    await _flutterTts.setVolume(1.0);
+    await _flutterTts.setPitch(1.0);
   }
 
   @override
@@ -40,6 +49,7 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
     _dniController.dispose();
     _focusNode.dispose();
     _clearTimer?.cancel();
+    _flutterTts.stop();
     super.dispose();
   }
 
@@ -59,7 +69,7 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_sonidosHabilitados ? 'Sonidos activados' : 'Sonidos desactivados'),
+        content: Text(_sonidosHabilitados ? 'Voz activada' : 'Voz desactivada'),
         duration: const Duration(seconds: 1),
       ),
     );
@@ -113,7 +123,7 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
 
         // Reproducir sonido según estado
         if (_sonidosHabilitados) {
-          _reproducirSonidoSegunEstado(estado);
+          _reproducirSonidoSegunEstado(estado, socio.nombreCompleto);
         }
 
         // Iniciar timer para limpiar feedback
@@ -131,54 +141,28 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
     }
   }
 
-  void _reproducirSonidoSegunEstado(String estado) async {
+  void _reproducirSonidoSegunEstado(String estado, String nombre) async {
     try {
-      // Crear un beep simple usando audioplayers
-      final player = AudioPlayer();
+      // Solo decir el primer nombre para que sea más rápido
+      final primerNombre = nombre.split(' ')[0];
       
       if (estado == 'Vencido') {
-        // Sonido de error (3 beeps rápidos)
-        for (int i = 0; i < 3; i++) {
-          await Future.delayed(Duration(milliseconds: i * 150));
-          await player.play(AssetSource('sounds/beep_error.mp3')).catchError((_) {
-            // Si no hay archivo, usar vibración o nada
-            debugPrint('No se pudo reproducir sonido de error');
-          });
-        }
+        await _flutterTts.speak("Alto. Cuota vencida.");
       } else if (estado == 'Por Vencer') {
-        // Sonido de advertencia (2 beeps)
-        for (int i = 0; i < 2; i++) {
-          await Future.delayed(Duration(milliseconds: i * 200));
-          await player.play(AssetSource('sounds/beep_warning.mp3')).catchError((_) {
-            debugPrint('No se pudo reproducir sonido de advertencia');
-          });
-        }
+        await _flutterTts.speak("Bienvenido $primerNombre. Tu cuota vence pronto.");
       } else {
-        // Sonido de éxito (1 beep)
-        await player.play(AssetSource('sounds/beep_success.mp3')).catchError((_) {
-          debugPrint('No se pudo reproducir sonido de éxito');
-        });
+        await _flutterTts.speak("Bienvenido $primerNombre.");
       }
-      
-      await player.dispose();
     } catch (e) {
-      debugPrint('Error reproduciendo sonido: $e');
+      debugPrint('Error reproduciendo voz: $e');
     }
   }
 
   void _reproducirSonidoError() async {
     try {
-      final player = AudioPlayer();
-      // Sonido de error fuerte (4 beeps muy rápidos)
-      for (int i = 0; i < 4; i++) {
-        await Future.delayed(Duration(milliseconds: i * 100));
-        await player.play(AssetSource('sounds/beep_error.mp3')).catchError((_) {
-          debugPrint('No se pudo reproducir sonido de error');
-        });
-      }
-      await player.dispose();
+      await _flutterTts.speak("DNI no encontrado.");
     } catch (e) {
-      debugPrint('Error reproduciendo sonido de error: $e');
+      debugPrint('Error reproduciendo voz de error: $e');
     }
   }
 

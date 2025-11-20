@@ -43,6 +43,31 @@ class DatabaseHelper {
     )
   ''';
 
+  // SQL para tabla de auditoría
+  static const String _createAuditoriaTableSql = '''
+    CREATE TABLE auditoria_socios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      socioId INTEGER NOT NULL,
+      accion TEXT NOT NULL, -- 'ELIMINAR', 'REACTIVAR'
+      usuarioId INTEGER,
+      usuarioNombre TEXT,
+      fechaHora TEXT NOT NULL,
+      detalles TEXT
+    )
+  ''';
+
+  static const String _createAuditoriaTableIfNotExistsSql = '''
+    CREATE TABLE IF NOT EXISTS auditoria_socios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      socioId INTEGER NOT NULL,
+      accion TEXT NOT NULL,
+      usuarioId INTEGER,
+      usuarioNombre TEXT,
+      fechaHora TEXT NOT NULL,
+      detalles TEXT
+    )
+  ''';
+
   Future<Database> _initDatabase() async {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, 'gym_database.db');
@@ -50,7 +75,7 @@ class DatabaseHelper {
     // ⚠️ INCREMENTA LA VERSIÓN para crear nuevas tablas
     return await openDatabase(
       path,
-      version: 10, // Incrementado a 10 para agregar activo a socios
+      version: 11, // Incrementado a 11 para agregar auditoría
       onCreate: (db, version) async {
         // Crear tabla de usuarios primero
         await db.execute(_createUsuariosTableSql);
@@ -62,6 +87,8 @@ class DatabaseHelper {
         await db.execute(_createPlanesTableSql);
         // Crear tabla de asistencias
         await db.execute(_createAsistenciasTableSql);
+        // Crear tabla de auditoría
+        await db.execute(_createAuditoriaTableSql);
 
         // Seed de admin para login de desarrollo
         await _crearUsuarioAdmin(db);
@@ -75,6 +102,7 @@ class DatabaseHelper {
         await db.execute(_createPagosTableIfNotExistsSql);
         await db.execute(_createPlanesTableIfNotExistsSql);
         await db.execute(_createAsistenciasTableIfNotExistsSql);
+        await db.execute(_createAuditoriaTableIfNotExistsSql);
         
         // CORRECCIÓN: Asegurar que los socios existentes tengan activo = 1
         await db.rawUpdate('UPDATE socios SET activo = 1 WHERE activo IS NULL');
@@ -198,32 +226,37 @@ class DatabaseHelper {
               debugPrint('ℹ️ La columna planId ya existe en la tabla socios');
             }
           } catch (e) {
-            debugPrint('❌ Error al agregar planId a socios: $e');
-            // Continuar con la migración incluso si hay un error
+            debugPrint('Error al añadir columna planId: $e');
           }
+          oldVersion = 8;
         }
-
         
-        // Migración a la versión 10 - Añadir activo a socios
-        if (oldVersion <= 9) {
+        // Migración a la versión 10 - Añadir columna activo a socios
+        if (oldVersion == 8 || oldVersion == 9) {
           try {
-            // Verificar si la columna ya existe
             final result = await db.rawQuery('PRAGMA table_info(socios)');
             final hasActivo = result.any((column) => column['name'] == 'activo');
             
             if (!hasActivo) {
               await db.execute('ALTER TABLE socios ADD COLUMN activo INTEGER DEFAULT 1');
               debugPrint('✅ Columna activo añadida a la tabla socios');
-            } else {
-              debugPrint('ℹ️ La columna activo ya existe en la tabla socios');
             }
           } catch (e) {
-            debugPrint('❌ Error al agregar activo a socios: $e');
+            debugPrint('Error al añadir columna activo: $e');
           }
+          oldVersion = 10;
+        }
+
+        // Migración a la versión 11 - Añadir tabla de auditoría
+        if (oldVersion == 10) {
+          await db.execute(_createAuditoriaTableSql);
+          debugPrint('✅ Tabla auditoria_socios creada');
+          oldVersion = 11;
         }
       },
     );
   }
+
 
   // NUEVO: SQL para tabla de usuarios
   static const String _createUsuariosTableSql = '''
@@ -646,6 +679,7 @@ class DatabaseHelper {
   }
 
   // MODIFICADO: Soft delete (baja lógica) con auditoría
+  // MODIFICADO: Soft delete (baja lógica) con auditoría
   Future<void> deleteSocio(int id, {int? usuarioId, String? usuarioNombre}) async {
     final db = await database;
     await db.update(
@@ -654,6 +688,16 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+    
+    // Registrar en auditoría
+    await _insertarAuditoria(
+      socioId: id,
+      accion: 'ELIMINAR',
+      usuarioId: usuarioId,
+      usuarioNombre: usuarioNombre,
+      detalles: 'Socio desactivado (baja lógica)',
+    );
+    
     debugPrint('🗑️ Socio ID:$id desactivado por usuario ID:$usuarioId ($usuarioNombre)');
   }
 
@@ -666,7 +710,59 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+    
+    // Registrar en auditoría
+    await _insertarAuditoria(
+      socioId: id,
+      accion: 'REACTIVAR',
+      usuarioId: usuarioId,
+      usuarioNombre: usuarioNombre,
+      detalles: 'Socio reactivado',
+    );
+    
     debugPrint('♻️ Socio ID:$id reactivado por usuario ID:$usuarioId ($usuarioNombre)');
+  }
+
+  // Método privado para insertar auditoría
+  Future<void> _insertarAuditoria({
+    required int socioId,
+    required String accion,
+    int? usuarioId,
+    String? usuarioNombre,
+    String? detalles,
+  }) async {
+    try {
+      final db = await database;
+      await db.insert('auditoria_socios', {
+        'socioId': socioId,
+        'accion': accion,
+        'usuarioId': usuarioId,
+        'usuarioNombre': usuarioNombre,
+        'fechaHora': DateTime.now().toIso8601String(),
+        'detalles': detalles,
+      });
+    } catch (e) {
+      debugPrint('Error al registrar auditoría: $e');
+    }
+  }
+
+  // Obtener historial de auditoría
+  Future<List<Map<String, dynamic>>> getAuditoria({int limit = 50}) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT 
+        a.id,
+        a.accion,
+        a.usuarioNombre,
+        a.fechaHora,
+        a.detalles,
+        s.nombreCompleto as socioNombre,
+        s.dni as socioDni
+      FROM auditoria_socios a
+      LEFT JOIN socios s ON a.socioId = s.id
+      ORDER BY a.fechaHora DESC
+      LIMIT ?
+    ''', [limit]);
   }
 
   Future<double> getIngresosMensuales() async {

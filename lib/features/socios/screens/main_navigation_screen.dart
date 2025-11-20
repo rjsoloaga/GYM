@@ -15,6 +15,8 @@ import 'package:gym/features/auth/models/usuario.dart';
 import 'package:gym/features/planes/screens/planes_list_screen.dart';
 import 'package:gym/features/socios/screens/lista_socios_inactivos_screen.dart';
 import 'package:gym/features/asistencia/screens/registro_asistencia_screen.dart';
+import 'package:gym/features/socios/screens/auditoria_screen.dart';
+import 'package:gym/features/asistencia/screens/historial_asistencia_screen.dart';
 import 'package:intl/intl.dart';
 
 
@@ -511,36 +513,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             },
           ),
           
-          // ITEM NUEVO: Reportes de Ingresos (solo para admin)
-          Builder(builder: (ctx) {
-            final authState = ctx.read<AuthBloc>().state;
-            String currentRole = '';
-            Usuario? usuarioActual;
-            
-            if (authState is AuthSuccess) {
-              usuarioActual = authState.usuario;
-              currentRole = usuarioActual?.rol ?? '';
-            }
 
-            if (currentRole == 'admin' && usuarioActual != null) {
-              return ListTile(
-                leading: Icon(Icons.assessment, color: Colors.purple),
-                title: Text('Reportes de Ingresos'),
-                subtitle: Text('Diarios y por operador'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AdminReportesScreen(usuarioActual: usuarioActual!),
-                    ),
-                  );
-                },
-              );
-            }
-
-            return SizedBox.shrink(); // Ocultar para no-admin
-          }),
           
           // ITEM NUEVO: Gestión de Usuarios (solo para admin)
           Builder(builder: (ctx) {
@@ -562,7 +535,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     title: const Text('Gestionar Usuarios', style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.pushNamed(context, '/gestion-usuarios');
+                      Navigator.pushNamed(context, '/admin-usuarios');
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.history, color: Colors.white70),
+                    title: const Text('Historial de Asistencia', style: TextStyle(color: Colors.white)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const HistorialAsistenciaScreen()),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.security, color: Colors.white70),
+                    title: const Text('Auditoría del Sistema', style: TextStyle(color: Colors.white)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AuditoriaScreen()),
+                      );
                     },
                   ),
                   const Divider(color: Colors.white24),

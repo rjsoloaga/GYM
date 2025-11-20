@@ -79,7 +79,11 @@ class SociosBloc extends Bloc<SocioEvent, SociosState> {
     Emitter<SociosState> emit,
   ) async {
     try {
-      await databaseHelper.deleteSocio(event.id);
+      await databaseHelper.deleteSocio(
+        event.id,
+        usuarioId: event.usuarioId,
+        usuarioNombre: event.usuarioNombre,
+      );
       // Recargar la lista despues de eliminar un socio
       add(CargarSociosEvent());
     } catch (e) {
@@ -143,7 +147,11 @@ class SociosBloc extends Bloc<SocioEvent, SociosState> {
     Emitter<SociosState> emit,
   ) async {
     try {
-      await databaseHelper.reactivarSocio(event.id);
+      await databaseHelper.reactivarSocio(
+        event.id,
+        usuarioId: event.usuarioId,
+        usuarioNombre: event.usuarioNombre,
+      );
       // Recargar la lista de inactivos para reflejar el cambio
       add(CargarSociosInactivosEvent());
     } catch (e) {

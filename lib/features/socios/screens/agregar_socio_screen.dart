@@ -5,6 +5,7 @@ import 'package:gym/features/planes/services/plan_service.dart';
 import 'package:gym/features/planes/models/plan.dart';
 import 'package:gym/features/socios/bloc/socios_bloc.dart';
 import 'package:gym/features/socios/models/socio.dart';
+import 'package:gym/core/database/database_helper.dart';
 
 class AgregarSocioScreen extends StatefulWidget {
   final Socio? socioParaEditar;
@@ -98,7 +99,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     }
   }
 
-  void _guardarSocio() {
+  Future<void> _guardarSocio() async {
     final nombre = _nombreController.text;
     final dni = _dniController.text;
 
@@ -110,6 +111,27 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
         ),
       );
       return;
+    }
+
+    // Validar DNI duplicado
+    final socioExistente = await DatabaseHelper.instance.getSocioPorDni(dni);
+    if (socioExistente != null) {
+      // Si estamos editando y el socio encontrado es el mismo, permitimos continuar
+      if (widget.socioParaEditar != null && socioExistente.id == widget.socioParaEditar!.id) {
+        // Es el mismo socio, todo bien
+      } else {
+        // Es otro socio con el mismo DNI
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ya existe un socio con el DNI $dni (${socioExistente.nombreCompleto})'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
     }
 
     final socio = widget.socioParaEditar == null

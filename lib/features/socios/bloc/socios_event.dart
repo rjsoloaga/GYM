@@ -16,7 +16,9 @@ class ActualizarSocioEvent extends SocioEvent {
 
 class EliminarSocioEvent extends SocioEvent {
   final int id;
-  EliminarSocioEvent(this.id);
+  final int? usuarioId;
+  final String? usuarioNombre;
+  EliminarSocioEvent(this.id, {this.usuarioId, this.usuarioNombre});
 }
 
 class BuscarSociosEvent extends SocioEvent {
@@ -28,5 +30,7 @@ class CargarSociosInactivosEvent extends SocioEvent {}
 
 class ReactivarSocioEvent extends SocioEvent {
   final int id;
-  ReactivarSocioEvent(this.id);
+  final int? usuarioId;
+  final String? usuarioNombre;
+  ReactivarSocioEvent(this.id, {this.usuarioId, this.usuarioNombre});
 }

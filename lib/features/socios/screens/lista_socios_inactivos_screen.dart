@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gym/features/socios/bloc/socios_bloc.dart';
+import 'package:gym/features/socios/bloc/auth_bloc.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import 'package:intl/intl.dart';
 
@@ -31,7 +32,28 @@ class _ListaSociosInactivosScreenState extends State<ListaSociosInactivosScreen>
           ),
           ElevatedButton(
             onPressed: () {
-              context.read<SociosBloc>().add(ReactivarSocioEvent(socio.id!));
+              // Obtener usuario actual
+              final authState = context.read<AuthBloc>().state;
+              int? usuarioId;
+              String? usuarioNombre;
+              
+              if (authState is AuthSuccess) {
+                usuarioId = authState.usuario.id;
+                usuarioNombre = authState.usuario.nombreCompleto;
+              } else if (authState is AuthAuthenticatedState) {
+                final user = authState.user;
+                usuarioId = user['id'] as int?;
+                usuarioNombre = user['nombreCompleto'] as String?;
+              }
+              
+              // Reactivar el socio con información de usuario
+              context.read<SociosBloc>().add(
+                ReactivarSocioEvent(
+                  socio.id!,
+                  usuarioId: usuarioId,
+                  usuarioNombre: usuarioNombre,
+                ),
+              );
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

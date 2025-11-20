@@ -113,8 +113,28 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              // Eliminar el socio
-              context.read<SociosBloc>().add(EliminarSocioEvent(socio.id!));
+              // Obtener usuario actual
+              final authState = context.read<AuthBloc>().state;
+              int? usuarioId;
+              String? usuarioNombre;
+              
+              if (authState is AuthSuccess) {
+                usuarioId = authState.usuario.id;
+                usuarioNombre = authState.usuario.nombreCompleto;
+              } else if (authState is AuthAuthenticatedState) {
+                final user = authState.user;
+                usuarioId = user['id'] as int?;
+                usuarioNombre = user['nombreCompleto'] as String?;
+              }
+              
+              // Eliminar el socio con información de usuario
+              context.read<SociosBloc>().add(
+                EliminarSocioEvent(
+                  socio.id!,
+                  usuarioId: usuarioId,
+                  usuarioNombre: usuarioNombre,
+                ),
+              );
               Navigator.pop(context);
               
               // Mostrar confirmación
