@@ -3,6 +3,7 @@ import 'telegram_service.dart';
 import 'package:gym/features/notificaciones/services/plantilla_service.dart';
 import 'package:gym/features/notificaciones/models/plantilla_notificacion.dart';
 import 'package:gym/core/database/database_helper.dart';
+import 'package:gym/services/recordatorios_service.dart';
 import 'dart:async';
 
 class NotificacionService {
@@ -38,7 +39,41 @@ class NotificacionService {
 
 
   static Future<Map<String, dynamic>> enviarNotificacionManual(Socio socio, {String? mensajePersonalizado}) async {
-    final String mensaje = mensajePersonalizado ?? _generarMensajePorEstadoCuota(socio);
+    // Si NO hay mensaje personalizado, usar el servicio de recordatorios multicanal
+    if (mensajePersonalizado == null) {
+      try {
+        final recordatoriosService = RecordatoriosService();
+        // Agregar estadoCuota al mapa ya que toMap() no lo incluye por defecto
+        final socioMap = socio.toMap();
+        socioMap['estadoCuota'] = socio.estadoCuota;
+        
+        final resultado = await recordatoriosService.enviarRecordatorioManual(socioMap);
+        
+        return {
+          'socio': socio.nombreCompleto,
+          'mensaje': 'Recordatorio enviado por múltiples canales',
+          'timestamp': DateTime.now(),
+          'exitoso': resultado['exito'] as bool,
+          'tipo': 'multicanal',
+          'error': resultado['exito'] ? null : 'Falló el envío multicanal',
+          'estadoCuota': socio.estadoCuota,
+        };
+      } catch (e) {
+        print('❌ Error en envío multicanal: $e');
+        return {
+          'socio': socio.nombreCompleto,
+          'mensaje': 'Error en envío',
+          'timestamp': DateTime.now(),
+          'exitoso': false,
+          'tipo': 'multicanal',
+          'error': e.toString(),
+          'estadoCuota': socio.estadoCuota,
+        };
+      }
+    }
+
+    // Si HAY mensaje personalizado, seguimos usando solo Telegram por ahora (o lo que estaba antes)
+    final String mensaje = mensajePersonalizado;
     final timestamp = DateTime.now();
     
     bool enviadoPorTelegram = false;
@@ -48,19 +83,6 @@ class NotificacionService {
     // VERIFICACIÓN MEJORADA - Solo enviar si tiene chatId REAL
     String? chatIdParaUsar = socio.telegramChatId;
     
-    // 🔍 DEBUG: Imprimir información del socio
-    print('═══════════════════════════════════════════════');
-    print('🔍 DEBUG NOTIFICACIÓN:');
-    print('├─ Socio: ${socio.nombreCompleto}');
-    print('├─ ID: ${socio.id}');
-    print('├─ Teléfono: ${socio.telefono}');
-    print('├─ ChatID: $chatIdParaUsar');
-    print('├─ ChatID es nulo: ${chatIdParaUsar == null}');
-    print('├─ ChatID vacío: ${chatIdParaUsar?.isEmpty}');
-    print('├─ ChatID empieza con temp_: ${chatIdParaUsar?.startsWith('temp_')}');
-    print('├─ Estado Cuota: ${socio.estadoCuota}');
-    print('═══════════════════════════════════════════════');
-
     // Si el chatId es temporal, NO enviar
     if (chatIdParaUsar == null || 
         chatIdParaUsar.isEmpty || 

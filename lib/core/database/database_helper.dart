@@ -68,6 +68,112 @@ class DatabaseHelper {
     )
   ''';
 
+  static const String _createRecordatoriosTableSql = '''
+    CREATE TABLE recordatorios_enviados (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      socioId INTEGER NOT NULL,
+      tipo TEXT NOT NULL,
+      canal TEXT NOT NULL,
+      fechaEnvio TEXT NOT NULL,
+      exitoso INTEGER NOT NULL DEFAULT 1,
+      detalles TEXT,
+      FOREIGN KEY (socioId) REFERENCES socios (id)
+    )
+  ''';
+
+  static const String _createRecordatoriosTableIfNotExistsSql = '''
+    CREATE TABLE IF NOT EXISTS recordatorios_enviados (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      socioId INTEGER NOT NULL,
+      tipo TEXT NOT NULL,
+      canal TEXT NOT NULL,
+      fechaEnvio TEXT NOT NULL,
+      exitoso INTEGER NOT NULL DEFAULT 1,
+      detalles TEXT,
+      FOREIGN KEY (socioId) REFERENCES socios (id)
+    )
+  ''';
+
+  static const String _createPlantillasTableSql = '''
+    CREATE TABLE plantillas_recordatorios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tipo TEXT NOT NULL,
+      canal TEXT NOT NULL,
+      asunto TEXT,
+      contenido TEXT NOT NULL,
+      activa INTEGER NOT NULL DEFAULT 1
+    )
+  ''';
+
+  static const String _createPlantillasTableIfNotExistsSql = '''
+    CREATE TABLE IF NOT EXISTS plantillas_recordatorios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tipo TEXT NOT NULL,
+      canal TEXT NOT NULL,
+      asunto TEXT,
+      contenido TEXT NOT NULL,
+      activa INTEGER NOT NULL DEFAULT 1
+    )
+  ''';
+
+  // === NUEVAS TABLAS PARA EJERCICIOS Y RUTINAS ===
+
+  // SQL para tabla de ejercicios
+  static const String _createEjerciciosTableSql = '''
+    CREATE TABLE ejercicios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL,
+      descripcion TEXT,
+      grupoMuscular TEXT,
+      videoUrl TEXT,
+      activo INTEGER DEFAULT 1
+    )
+  ''';
+
+  // SQL para tabla de rutinas
+  static const String _createRutinasTableSql = '''
+    CREATE TABLE rutinas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL,
+      descripcion TEXT,
+      nivel TEXT, -- 'Principiante', 'Intermedio', 'Avanzado'
+      activo INTEGER DEFAULT 1,
+      fechaCreacion TEXT NOT NULL
+    )
+  ''';
+
+  // SQL para tabla pivote rutina_ejercicios
+  static const String _createRutinaEjerciciosTableSql = '''
+    CREATE TABLE rutina_ejercicios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      rutinaId INTEGER NOT NULL,
+      ejercicioId INTEGER NOT NULL,
+      orden INTEGER NOT NULL,
+      series INTEGER,
+      repeticiones INTEGER,
+      descansoSegundos INTEGER,
+      notas TEXT,
+      FOREIGN KEY (rutinaId) REFERENCES rutinas (id) ON DELETE CASCADE,
+      FOREIGN KEY (ejercicioId) REFERENCES ejercicios (id)
+    )
+  ''';
+
+  // SQL para asignación de rutinas a socios
+  static const String _createAsignacionRutinasTableSql = '''
+    CREATE TABLE asignacion_rutinas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      socioId INTEGER NOT NULL,
+      rutinaId INTEGER NOT NULL,
+      fechaAsignacion TEXT NOT NULL,
+      fechaFin TEXT,
+      activa INTEGER DEFAULT 1,
+      notas TEXT,
+      FOREIGN KEY (socioId) REFERENCES socios (id) ON DELETE CASCADE,
+      FOREIGN KEY (rutinaId) REFERENCES rutinas (id)
+    )
+  ''';
+
+
   Future<Database> _initDatabase() async {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, 'gym_database.db');
@@ -75,40 +181,65 @@ class DatabaseHelper {
     // ⚠️ INCREMENTA LA VERSIÓN para crear nuevas tablas
     return await openDatabase(
       path,
-      version: 11, // Incrementado a 11 para agregar auditoría
+      version: 15, // Incrementado a 15 para agregar rutinas y ejercicios
       onCreate: (db, version) async {
         // Crear tabla de usuarios primero
         await db.execute(_createUsuariosTableSql);
-        // Crear tabla de socios
-        await db.execute(_createSociosTableSql);
-        // Crear tabla de pagos
-        await db.execute(_createPagosTableSql);
+        
         // Crear tabla de planes
         await db.execute(_createPlanesTableSql);
-        // Crear tabla de asistencias
-        await db.execute(_createAsistenciasTableSql);
+        
+        // Crear tabla de socios
+        await db.execute(_createSociosTableSql);
+        
         // Crear tabla de auditoría
         await db.execute(_createAuditoriaTableSql);
 
-        // Seed de admin para login de desarrollo
-        await _crearUsuarioAdmin(db);
-        // Crear planes por defecto
-        await _crearPlanesPorDefecto(db);
-      },
-      onOpen: (db) async {
-        // Asegurar tablas si faltan
-        await db.execute(_createUsuariosTableIfNotExistsSql);
-        await db.execute(_createSociosTableIfNotExistsSql);
-        await db.execute(_createPagosTableIfNotExistsSql);
-        await db.execute(_createPlanesTableIfNotExistsSql);
-        await db.execute(_createAsistenciasTableIfNotExistsSql);
-        await db.execute(_createAuditoriaTableIfNotExistsSql);
+        // Crear tabla de recordatorios
+        await db.execute(_createRecordatoriosTableSql);
+
+        // Crear tabla de plantillas
+        await db.execute(_createPlantillasTableSql);
+
+        // Crear tablas de ejercicios y rutinas
+        await db.execute(_createEjerciciosTableSql);
+        await db.execute(_createRutinasTableSql);
+        await db.execute(_createRutinaEjerciciosTableSql);
+        await db.execute(_createAsignacionRutinasTableSql);
         
-        // CORRECCIÓN: Asegurar que los socios existentes tengan activo = 1
-        await db.rawUpdate('UPDATE socios SET activo = 1 WHERE activo IS NULL');
+        // Insertar planes por defecto
+        await _crearPlanesPorDefecto(db);
+
+        // Insertar plantillas por defecto
+        await _crearPlantillasPorDefecto(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        // Migración desde versión 2 a 3
+        debugPrint('🔄 Actualizando base de datos de versión $oldVersion a $newVersion');
+        
+        // Migración de versión 14 a 15: Añadir tablas de rutinas
+        if (oldVersion < 15) {
+          try {
+            await db.execute(_createEjerciciosTableSql);
+            await db.execute(_createRutinasTableSql);
+            await db.execute(_createRutinaEjerciciosTableSql);
+            await db.execute(_createAsignacionRutinasTableSql);
+            debugPrint('✅ Tablas de ejercicios y rutinas creadas correctamente');
+          } catch (e) {
+            debugPrint('⚠️ Error creando tablas de rutinas (pueden ya existir): $e');
+          }
+        }
+
+        // Migración de versión 13 a 14: Añadir fechaNacimiento
+        if (oldVersion < 14) {
+          try {
+            await db.execute('ALTER TABLE socios ADD COLUMN fechaNacimiento TEXT');
+            debugPrint('✅ Campo fechaNacimiento añadido a tabla socios');
+          } catch (e) {
+            debugPrint('⚠️ Error añadiendo fechaNacimiento (puede que ya exista): $e');
+          }
+        }
+        
+        // Migraciones anteriores...
         if (oldVersion == 2) {
           // Crear tabla de usuarios
           await db.execute(_createUsuariosTableSql);
@@ -116,6 +247,7 @@ class DatabaseHelper {
           await _migrarAdminDesdeSocios(db);
           // Agregar nuevas columnas a socios
           await db.execute('ALTER TABLE socios ADD COLUMN pendienteAprobacion INTEGER DEFAULT 0');
+
           await db.execute('ALTER TABLE socios ADD COLUMN fechaRegistroTelegram TEXT');
           await db.execute('ALTER TABLE socios ADD COLUMN usuarioId INTEGER');
         }
@@ -254,6 +386,20 @@ class DatabaseHelper {
           oldVersion = 11;
         }
       },
+      onOpen: (db) async {
+        // Asegurar tablas si faltan
+        await db.execute(_createUsuariosTableIfNotExistsSql);
+        await db.execute(_createSociosTableIfNotExistsSql);
+        await db.execute(_createPagosTableIfNotExistsSql);
+        await db.execute(_createPlanesTableIfNotExistsSql);
+        await db.execute(_createAsistenciasTableIfNotExistsSql);
+        await db.execute(_createAuditoriaTableIfNotExistsSql);
+        await db.execute(_createRecordatoriosTableIfNotExistsSql);
+        await db.execute(_createPlantillasTableIfNotExistsSql);
+        
+        // CORRECCIÓN: Asegurar que los socios existentes tengan activo = 1
+        await db.rawUpdate('UPDATE socios SET activo = 1 WHERE activo IS NULL');
+      },
     );
   }
 
@@ -295,6 +441,7 @@ class DatabaseHelper {
       dni TEXT NOT NULL,
       telefono TEXT NOT NULL, 
       email TEXT NOT NULL,
+      fechaNacimiento TEXT,
       fechaInicio TEXT NOT NULL,
       fechaVencimiento TEXT NOT NULL,
       precioMensual REAL NOT NULL,
@@ -316,6 +463,7 @@ class DatabaseHelper {
       dni TEXT NOT NULL UNIQUE,
       telefono TEXT NOT NULL,
       email TEXT NOT NULL,
+      fechaNacimiento TEXT,
       fechaInicio TEXT NOT NULL,
       fechaVencimiento TEXT NOT NULL,
       precioMensual REAL NOT NULL,
@@ -412,6 +560,203 @@ class DatabaseHelper {
       }
     }
   }
+
+  // Crear plantillas por defecto
+  static Future<void> _crearPlantillasPorDefecto(Database db) async {
+    final plantillas = [
+      // === CUOTA PRÓXIMA - EMAIL ===
+      {
+        'tipo': 'cuota_proxima',
+        'canal': 'email',
+        'asunto': '🏋️ Recordatorio: Tu cuota vence en {dias} días',
+        'contenido': '''<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .highlight { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏋️ Recordatorio de Cuota</h1>
+        </div>
+        <div class="content">
+            <h2>Hola {nombre},</h2>
+            <div class="highlight">
+                <strong>Tu cuota vence en {dias} días</strong> (el {fecha})
+            </div>
+            <p>Para continuar disfrutando de nuestras instalaciones sin interrupciones, te sugerimos realizar el pago antes de la fecha de vencimiento.</p>
+            <p>Si ya realizaste el pago, por favor ignora este mensaje.</p>
+            <p>¡Gracias por ser parte de {gimnasio}!</p>
+            <p><strong>Contacto:</strong> {telefono} | {email}</p>
+        </div>
+        <div class="footer">
+            <p>Este es un mensaje automático. Por favor no respondas a este email.</p>
+        </div>
+    </div>
+</body>
+</html>''',
+        'activa': 1,
+      },
+      
+      // === CUOTA PRÓXIMA - TELEGRAM ===
+      {
+        'tipo': 'cuota_proxima',
+        'canal': 'telegram',
+        'asunto': null,
+        'contenido': '''🏋️ *Recordatorio de Cuota*
+
+Hola {nombre_corto},
+
+Tu cuota vence en *{dias} días* (el {fecha}).
+
+Para continuar disfrutando de nuestras instalaciones sin interrupciones, te sugerimos realizar el pago antes de la fecha de vencimiento.
+
+Si ya realizaste el pago, por favor ignora este mensaje.
+
+¡Gracias por ser parte de {gimnasio}! 💪
+
+📞 {telefono}''',
+        'activa': 1,
+      },
+      
+      // === CUOTA VENCIDA - EMAIL ===
+      {
+        'tipo': 'cuota_vencida',
+        'canal': 'email',
+        'asunto': '⚠️ Tu cuota de {gimnasio} está vencida',
+        'contenido': '''<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .alert { background: #fff3cd; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ Cuota Vencida</h1>
+        </div>
+        <div class="content">
+            <h2>Hola {nombre},</h2>
+            <div class="alert">
+                <strong>Tu cuota venció el {fecha}</strong>
+            </div>
+            <p>Para continuar utilizando nuestras instalaciones, te pedimos que regularices tu situación a la brevedad.</p>
+            <p>Si ya realizaste el pago, por favor comunícate con nosotros para actualizar tu estado.</p>
+            <p>¡Esperamos verte pronto en {gimnasio}!</p>
+            <p><strong>Contacto:</strong> {telefono} | {email}</p>
+        </div>
+        <div class="footer">
+            <p>Este es un mensaje automático. Por favor no respondas a este email.</p>
+        </div>
+    </div>
+</body>
+</html>''',
+        'activa': 1,
+      },
+      
+      // === CUOTA VENCIDA - TELEGRAM ===
+      {
+        'tipo': 'cuota_vencida',
+        'canal': 'telegram',
+        'asunto': null,
+        'contenido': '''⚠️ *Cuota Vencida*
+
+Hola {nombre_corto},
+
+Tu cuota venció el {fecha}.
+
+Para continuar utilizando nuestras instalaciones, te pedimos que regularices tu situación a la brevedad.
+
+Si ya realizaste el pago, por favor comunícate con nosotros para actualizar tu estado.
+
+¡Esperamos verte pronto! 🏋️
+
+📞 {telefono}''',
+        'activa': 1,
+      },
+      
+      // === CUMPLEAÑOS - EMAIL ===
+      {
+        'tipo': 'cumpleanos',
+        'canal': 'email',
+        'asunto': '🎉 ¡Feliz Cumpleaños, {nombre_corto}!',
+        'contenido': '''<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; text-align: center; }
+        .emoji { font-size: 48px; }
+        .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="emoji">🎉🎂🎈</div>
+            <h1>¡Feliz Cumpleaños!</h1>
+        </div>
+        <div class="content">
+            <h2>¡Feliz cumpleaños, {nombre}!</h2>
+            <p>Todo el equipo de {gimnasio} te desea un día increíble lleno de alegría y salud.</p>
+            <p>¡Gracias por ser parte de nuestra familia fitness!</p>
+            <p>🎁 <strong>Sorpresa:</strong> Consulta en recepción por tu regalo de cumpleaños 😊</p>
+            <p><strong>Contacto:</strong> {telefono} | {email}</p>
+        </div>
+        <div class="footer">
+            <p>Este es un mensaje automático. Por favor no respondas a este email.</p>
+        </div>
+    </div>
+</body>
+</html>''',
+        'activa': 1,
+      },
+      
+      // === CUMPLEAÑOS - TELEGRAM ===
+      {
+        'tipo': 'cumpleanos',
+        'canal': 'telegram',
+        'asunto': null,
+        'contenido': '''🎉🎂🎈 *¡Feliz Cumpleaños!*
+
+¡Feliz cumpleaños, {nombre}!
+
+Todo el equipo de {gimnasio} te desea un día increíble lleno de alegría y salud.
+
+¡Gracias por ser parte de nuestra familia fitness!
+
+🎁 *Sorpresa:* Consulta en recepción por tu regalo de cumpleaños 😊
+
+📞 {telefono}''',
+        'activa': 1,
+      },
+    ];
+
+    for (var plantilla in plantillas) {
+      try {
+        await db.insert('plantillas_recordatorios', plantilla);
+      } catch (e) {
+        // Ignorar si ya existe
+        debugPrint('Plantilla ya existe: ${plantilla['tipo']}-${plantilla['canal']}');
+      }
+    }
+  }
+
 
   // Crear usuario admin
   static Future<void> _crearUsuarioAdmin(Database db) async {
@@ -856,6 +1201,34 @@ class DatabaseHelper {
     return (result.first['total'] as num?)?.toDouble() ?? 0.0;
   }
 
+  // Obtener ingresos de los últimos N días para gráficos
+  Future<List<Map<String, dynamic>>> getIngresosUltimosDias({int dias = 7}) async {
+    final db = await database;
+    final now = DateTime.now();
+    final resultado = <Map<String, dynamic>>[];
+
+    for (int i = dias - 1; i >= 0; i--) {
+      final fecha = now.subtract(Duration(days: i));
+      final startOfDay = DateTime(fecha.year, fecha.month, fecha.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final result = await db.rawQuery('''
+        SELECT SUM(amount) as total 
+        FROM pagos 
+        WHERE date >= ? AND date < ?
+      ''', [startOfDay.toIso8601String(), endOfDay.toIso8601String()]);
+
+      final total = (result.first['total'] as num?)?.toDouble() ?? 0.0;
+      
+      resultado.add({
+        'fecha': startOfDay,
+        'total': total,
+      });
+    }
+
+    return resultado;
+  }
+
   // Obtener ingresos mensuales (por tabla de pagos en lugar de cálculo de cuotas)
   Future<double> getIngresosMensualesPorPagos() async {
     final db = await database;
@@ -919,6 +1292,16 @@ class DatabaseHelper {
     return result.isNotEmpty ? Socio.fromMap(result.first) : null;
   }
 
+  Future<Map<String, dynamic>?> getSocioPorTelefono(String telefono) async {
+    final db = await database;
+    final result = await db.query(
+      'socios',
+      where: 'telefono = ? AND activo = 1',
+      whereArgs: [telefono],
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+
   // Registrar asistencia
   Future<int> registrarAsistencia(int socioId, String estadoCuota) async {
     final db = await database;
@@ -958,6 +1341,192 @@ class DatabaseHelper {
       FROM asistencias a
       LEFT JOIN socios s ON a.socioId = s.id
       ORDER BY a.fechaHora DESC
+      LIMIT ?
+    ''', [limit]);
+  }
+
+  // Obtener asistencias agrupadas por día de la semana (últimos 30 días)
+  Future<Map<String, int>> getAsistenciasPorDiaSemana() async {
+    final db = await database;
+    final now = DateTime.now();
+    final hace30Dias = now.subtract(const Duration(days: 30));
+
+    final result = await db.rawQuery('''
+      SELECT 
+        CAST(strftime('%w', fechaHora) AS INTEGER) as diaSemana,
+        COUNT(*) as count
+      FROM asistencias
+      WHERE fechaHora >= ?
+      GROUP BY diaSemana
+      ORDER BY diaSemana
+    ''', [hace30Dias.toIso8601String()]);
+
+    // Mapear números a nombres de días (0=Domingo, 1=Lunes, etc.)
+    final dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    final Map<String, int> estadisticas = {};
+    
+    // Inicializar todos los días en 0
+    for (var dia in dias) {
+      estadisticas[dia] = 0;
+    }
+    
+    // Llenar con datos reales
+    for (var row in result) {
+      final diaSemana = (row['diaSemana'] as int?) ?? 0;
+      final count = (row['count'] as int?) ?? 0;
+      estadisticas[dias[diaSemana]] = count;
+    }
+
+    return estadisticas;
+  }
+
+  // Obtener socios que no asisten hace X días
+  Future<List<Map<String, dynamic>>> getSociosSinAsistir({int dias = 30}) async {
+    final db = await database;
+    final now = DateTime.now();
+    final fechaLimite = now.subtract(Duration(days: dias));
+
+    return await db.rawQuery('''
+      SELECT 
+        s.id,
+        s.nombreCompleto,
+        s.dni,
+        s.telefono,
+        MAX(a.fechaHora) as ultimaAsistencia,
+        CAST((julianday('now') - julianday(MAX(a.fechaHora))) AS INTEGER) as diasSinAsistir
+      FROM socios s
+      LEFT JOIN asistencias a ON s.id = a.socioId
+      WHERE s.activo = 1
+      GROUP BY s.id
+      HAVING ultimaAsistencia IS NULL OR ultimaAsistencia < ?
+      ORDER BY ultimaAsistencia ASC
+    ''', [fechaLimite.toIso8601String()]);
+  }
+
+  // ============================================================================
+  // MÉTODOS DE RECORDATORIOS
+  // ============================================================================
+
+  // Registrar envío de recordatorio
+  Future<int> registrarRecordatorio({
+    required int socioId,
+    required String tipo, // 'cuota_proxima', 'cuota_vencida', 'cumpleanos'
+    required String canal, // 'email', 'telegram', 'ambos'
+    required bool exitoso,
+    String? detalles,
+  }) async {
+    final db = await database;
+    return await db.insert('recordatorios_enviados', {
+      'socioId': socioId,
+      'tipo': tipo,
+      'canal': canal,
+      'fechaEnvio': DateTime.now().toIso8601String(),
+      'exitoso': exitoso ? 1 : 0,
+      'detalles': detalles,
+    });
+  }
+
+  // Verificar si ya se envió un recordatorio hoy
+  Future<bool> yaSeEnvioHoy({
+    required int socioId,
+    required String tipo,
+  }) async {
+    final db = await database;
+    final hoy = DateTime.now();
+    final inicioHoy = DateTime(hoy.year, hoy.month, hoy.day);
+    final finHoy = inicioHoy.add(const Duration(days: 1));
+
+    final result = await db.query(
+      'recordatorios_enviados',
+      where: 'socioId = ? AND tipo = ? AND fechaEnvio >= ? AND fechaEnvio < ?',
+      whereArgs: [
+        socioId,
+        tipo,
+        inicioHoy.toIso8601String(),
+        finHoy.toIso8601String(),
+      ],
+    );
+
+    return result.isNotEmpty;
+  }
+
+  // Obtener socios con cuota próxima a vencer
+  Future<List<Map<String, dynamic>>> getSociosCuotaPorVencer({int diasAnticipacion = 3}) async {
+    final db = await database;
+    final hoy = DateTime.now();
+    final fechaLimite = hoy.add(Duration(days: diasAnticipacion));
+    final fechaLimiteStr = DateTime(fechaLimite.year, fechaLimite.month, fechaLimite.day).toIso8601String();
+    final hoyStr = DateTime(hoy.year, hoy.month, hoy.day).toIso8601String();
+
+    return await db.rawQuery('''
+      SELECT 
+        s.id,
+        s.nombreCompleto,
+        s.email,
+        s.telefono,
+        s.fechaVencimiento,
+        CAST((julianday(s.fechaVencimiento) - julianday('now')) AS INTEGER) as diasRestantes
+      FROM socios s
+      WHERE s.activo = 1
+        AND s.fechaVencimiento >= ?
+        AND s.fechaVencimiento < ?
+      ORDER BY s.fechaVencimiento ASC
+    ''', [hoyStr, fechaLimiteStr]);
+  }
+
+  // Obtener socios con cuota vencida
+  Future<List<Map<String, dynamic>>> getSociosCuotaVencida() async {
+    final db = await database;
+    final hoy = DateTime.now();
+    final hoyStr = DateTime(hoy.year, hoy.month, hoy.day).toIso8601String();
+
+    return await db.rawQuery('''
+      SELECT 
+        s.id,
+        s.nombreCompleto,
+        s.email,
+        s.telefono,
+        s.fechaVencimiento,
+        CAST((julianday('now') - julianday(s.fechaVencimiento)) AS INTEGER) as diasVencidos
+      FROM socios s
+      WHERE s.activo = 1
+        AND s.fechaVencimiento < ?
+      ORDER BY s.fechaVencimiento ASC
+    ''', [hoyStr]);
+  }
+
+  // Obtener socios con cumpleaños hoy
+  Future<List<Map<String, dynamic>>> getSociosCumpleanosHoy() async {
+    final db = await database;
+    final hoy = DateTime.now();
+    final mesHoy = hoy.month.toString().padLeft(2, '0');
+    final diaHoy = hoy.day.toString().padLeft(2, '0');
+
+    return await db.rawQuery('''
+      SELECT 
+        s.id,
+        s.nombreCompleto,
+        s.email,
+        s.telefono,
+        s.fechaNacimiento
+      FROM socios s
+      WHERE s.activo = 1
+        AND substr(s.fechaNacimiento, 6, 2) = ?
+        AND substr(s.fechaNacimiento, 9, 2) = ?
+    ''', [mesHoy, diaHoy]);
+  }
+
+  // Obtener historial de recordatorios
+  Future<List<Map<String, dynamic>>> getHistorialRecordatorios({int limit = 100}) async {
+    final db = await database;
+    return await db.rawQuery('''
+      SELECT 
+        r.*,
+        s.nombreCompleto,
+        s.dni
+      FROM recordatorios_enviados r
+      INNER JOIN socios s ON r.socioId = s.id
+      ORDER BY r.fechaEnvio DESC
       LIMIT ?
     ''', [limit]);
   }

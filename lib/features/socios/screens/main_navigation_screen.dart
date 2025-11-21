@@ -14,9 +14,17 @@ import 'package:gym/features/dashboard/screens/admin_reportes_screen.dart';
 import 'package:gym/features/auth/models/usuario.dart';
 import 'package:gym/features/planes/screens/planes_list_screen.dart';
 import 'package:gym/features/socios/screens/lista_socios_inactivos_screen.dart';
+import 'package:gym/services/gym_config_service.dart';
 import 'package:gym/features/asistencia/screens/registro_asistencia_screen.dart';
 import 'package:gym/features/socios/screens/auditoria_screen.dart';
 import 'package:gym/features/asistencia/screens/historial_asistencia_screen.dart';
+import 'package:gym/features/asistencia/screens/estadisticas_asistencia_screen.dart';
+import 'package:gym/features/notificaciones/screens/configuracion_email_screen.dart';
+import 'package:gym/features/notificaciones/screens/configuracion_recordatorios_screen.dart';
+import 'package:gym/features/configuracion/screens/configuracion_general_screen.dart';
+import 'package:gym/features/rutinas/screens/lista_ejercicios_screen.dart';
+import 'package:gym/features/rutinas/screens/lista_rutinas_screen.dart';
+import 'package:gym/features/socios/widgets/side_menu.dart';
 import 'package:intl/intl.dart';
 
 
@@ -28,12 +36,30 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 1;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  int _currentIndex = 0; // Dashboard por defecto
   late final Stream<List<Socio>> _sociosPendientesBroadcast;
   int _dashboardRefreshKey = 0; // fuerza recreación del dashboard
   Timer? _clockTimer;
   Timer? _clockAlignTimer;
+
+  // Mapa de títulos para el AppBar según el índice
+  final Map<int, String> _titles = {
+    0: 'Dashboard',
+    1: 'Gestión de Socios',
+    2: 'Registro de Asistencia',
+    3: 'Planes',
+    4: 'Ejercicios',
+    5: 'Rutinas',
+    6: 'Configuración General',
+    7: 'Configuración de Email',
+    8: 'Configuración de Recordatorios',
+    9: 'Gestión de Usuarios',
+    10: 'Aprobación de Socios',
+    11: 'Estadísticas de Asistencia',
+    12: 'Historial de Asistencia',
+    13: 'Auditoría del Sistema',
+    14: 'Socios Inactivos',
+  };
 
   void _logout(BuildContext context) {
     showDialog(
@@ -108,10 +134,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   void initState() {
     super.initState();
-    // Crear un stream broadcast para evitar que múltiples listeners (al abrir/cerrar drawer
-    // y al reconstruir la UI) intenten suscribirse al mismo stream de una sola suscripción.
     _sociosPendientesBroadcast = _sociosPendientesStream().asBroadcastStream();
-    // Refrescar inmediatamente y alinear al inicio del minuto
     setState(() {});
     _startClockTimer();
   }
@@ -132,135 +155,140 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             );
           }
 
-          // LISTA DE PANTALLAS CON SUS PROPIO SCAFFOLD
-          final List<Widget> _screens = [
-            // Pantalla de Socios
-            Scaffold(
-              appBar: AppBar(
-                title: const Text('Socios'),
-                backgroundColor: const Color(0xFF0D1B2A),
-                leading: IconButton(
-                  icon: Icon(Icons.menu),
-                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () {
-                      _actualizarListaSocios(context);
-                    },
-                    tooltip: 'Actualizar lista',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.notifications),
-                    onPressed: () {
-                      _verificarNotificaciones(context);
-                    },
-                    tooltip: 'Verificar recordatorios',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.logout),
-                    onPressed: () => _logout(context),
-                    tooltip: 'Cerrar sesión',
-                  ),
-                ],
-                bottom: _buildInfoBar(context, authState),
-              ),
-              body: const ListaSociosScreen(),
-            ),
-            // Pantalla de Dashboard  
-            Scaffold(
-              appBar: AppBar(
-                title: const Text('Dashboard'),
-                backgroundColor: const Color(0xFF0D1B2A),
-                leading: IconButton(
-                  icon: Icon(Icons.menu),
-                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                ),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () {
-                      setState(() {
-                        _dashboardRefreshKey++; // Forzar recálculo de estadísticas
-                      });
-                    },
-                    tooltip: 'Actualizar',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.notifications),
-                    onPressed: () {
-                      _verificarNotificaciones(context);
-                    },
-                    tooltip: 'Verificar recordatorios',
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.logout),
-                    onPressed: () => _logout(context),
-                    tooltip: 'Cerrar sesión',
-                  ),
-                ],
-                bottom: _buildInfoBar(context, authState),
-              ),
-              body: DashboardScreen(key: ValueKey<int>(_dashboardRefreshKey)),
-            ),
-            // Pantalla de Asistencia
-            const RegistroAsistenciaScreen(),
-          ];
+          // Determinar si es admin
+          bool isAdmin = false;
+          if (authState is AuthSuccess) {
+            final dynamic usuario = (authState as AuthSuccess).usuario;
+            if (usuario is Usuario) {
+              isAdmin = usuario.rol == 'admin';
+            } else if (usuario is Map) {
+              isAdmin = usuario['rol'] == 'admin';
+            }
+          } else if (authState is AuthAuthenticatedState) {
+            final dynamic user = (authState as AuthAuthenticatedState).user;
+            if (user is Map) {
+              isAdmin = user['rol'] == 'admin';
+            }
+          }
 
           return BlocListener<SociosBloc, SociosState>(
             listener: (context, sociosState) {
               if (sociosState is SociosCargadosState) {
                 setState(() {
-                  _dashboardRefreshKey++; // Recalcular cuando cambia la lista de socios
+                  _dashboardRefreshKey++; 
                 });
               }
             },
             child: Scaffold(
-              key: _scaffoldKey,
-              drawer: _buildDrawer(context),
-              body: _screens[_currentIndex],
-              bottomNavigationBar: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color.fromRGBO(255,255,255,0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, -2),
+              body: Row(
+                children: [
+                  // MENÚ LATERAL
+                  StreamBuilder<List<Socio>>(
+                    stream: _sociosPendientesBroadcast,
+                    builder: (context, snapshot) {
+                      return SideMenu(
+                        selectedIndex: _currentIndex,
+                        isAdmin: isAdmin,
+                        pendientesCount: snapshot.data?.length ?? 0,
+                        onItemSelected: (index) {
+                          if (index == -1) {
+                            _logout(context);
+                          } else {
+                            setState(() {
+                              _currentIndex = index;
+                              if (index == 0) {
+                                _dashboardRefreshKey++;
+                              }
+                            });
+                          }
+                        },
+                      );
+                    }
+                  ),
+                  
+                  // CONTENIDO PRINCIPAL
+                  Expanded(
+                    child: Column(
+                      children: [
+                        // APP BAR PERSONALIZADO
+                        Container(
+                          height: 60,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E1E1E),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _titles[_currentIndex] ?? 'Gym Manager',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Row(
+                                children: [
+                                  _buildInfoBar(context, authState),
+                                  const SizedBox(width: 20),
+                                  IconButton(
+                                    icon: ValueListenableBuilder<ThemeMode>(
+                                      valueListenable: GymConfigService().themeModeNotifier,
+                                      builder: (context, mode, _) {
+                                        return Icon(
+                                          mode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+                                        );
+                                      },
+                                    ),
+                                    onPressed: () {
+                                      GymConfigService().toggleTheme();
+                                    },
+                                    tooltip: 'Cambiar tema',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.refresh),
+                                    onPressed: () {
+                                      if (_currentIndex == 1) {
+                                        _actualizarListaSocios(context);
+                                      } else if (_currentIndex == 0) {
+                                        setState(() => _dashboardRefreshKey++);
+                                      }
+                                    },
+                                    tooltip: 'Actualizar',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.notifications),
+                                    onPressed: () => _verificarNotificaciones(context),
+                                    tooltip: 'Verificar recordatorios',
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // CUERPO DE LA PANTALLA
+                        Expanded(
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            transitionBuilder: (Widget child, Animation<double> animation) {
+                              return FadeTransition(opacity: animation, child: child);
+                            },
+                            child: _buildBody(),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: BottomNavigationBar(
-                  currentIndex: _currentIndex,
-                  onTap: (index) {
-                    setState(() {
-                      _currentIndex = index;
-                      if (index == 1) {
-                        // Al entrar al Dashboard, recrearlo para recalcular estadísticas
-                        _dashboardRefreshKey++;
-                      }
-                    });
-                  },
-                  backgroundColor: const Color(0xFF1E1E1E),
-                  selectedItemColor: const Color(0xFF2196F3),
-                  unselectedItemColor: Colors.grey,
-                  type: BottomNavigationBarType.fixed,
-                  items: const [
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.people),
-                      label: 'Socios',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.dashboard),
-                      label: 'Dashboard',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.login),
-                      label: 'Asistencia',
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           );
@@ -269,39 +297,32 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
-  // MÉTODOS PARA CONECTAR CON LAS FUNCIONALIDADES REALES
-  void _procesarRegistrosTelegram(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    
-    messenger.showSnackBar(
-      const SnackBar(content: Text('🔄 Procesando registros de Telegram...')),
-    );
-
-    try {
-      await ChatIdRegistroService.procesarNuevosChatIds();
-      
-      final stats = await ChatIdRegistroService.obtenerEstadisticasRegistros();
-      
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('✅ ${stats['registrados']}/${stats['total']} socios registrados en Telegram'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('❌ Error procesando registros: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+  Widget _buildBody() {
+    // Usamos un switch para devolver el widget correspondiente
+    // Nota: No usamos IndexedStack para las pantallas pesadas para ahorrar recursos,
+    // pero sí mantenemos el estado de algunas si es necesario.
+    switch (_currentIndex) {
+      case 0: return DashboardScreen(key: ValueKey<int>(_dashboardRefreshKey));
+      case 1: return const ListaSociosScreen();
+      case 2: return const RegistroAsistenciaScreen();
+      case 3: return const PlanesListScreen();
+      case 4: return const ListaEjerciciosScreen();
+      case 5: return const ListaRutinasScreen();
+      case 6: return const ConfiguracionGeneralScreen();
+      case 7: return const ConfiguracionEmailScreen();
+      case 8: return const ConfiguracionRecordatoriosScreen();
+      case 9: return GestionUsuariosScreen();
+      case 10: return AprobacionSociosScreen();
+      case 11: return const EstadisticasAsistenciaScreen();
+      case 12: return const HistorialAsistenciaScreen();
+      case 13: return const AuditoriaScreen();
+      case 14: return const ListaSociosInactivosScreen();
+      default: return const Center(child: Text('Pantalla no encontrada'));
     }
   }
 
   void _verificarNotificaciones(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    
     messenger.showSnackBar(
       const SnackBar(content: Text('🔔 Verificando recordatorios pendientes...')),
     );
@@ -343,11 +364,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('🔄 Actualizando lista de socios...')),
     );
-    
     context.read<SociosBloc>().add(CargarSociosEvent());
   }
 
-  PreferredSizeWidget _buildInfoBar(BuildContext context, AuthState authState) {
+  Widget _buildInfoBar(BuildContext context, AuthState authState) {
     String nombre = '';
     String rol = '';
     if (authState is AuthSuccess) {
@@ -364,255 +384,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       }
     }
     final fechaHora = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
-    return PreferredSize(
-      preferredSize: const Size.fromHeight(24),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        child: Text(
-          '$nombre: $rol • $fechaHora',
+    
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          '$nombre ($rol)',
+          style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          fechaHora,
           style: const TextStyle(fontSize: 12, color: Colors.white70),
         ),
-      ),
+      ],
     );
   }
-
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.fitness_center, size: 40, color: Colors.white),
-                SizedBox(height: 10),
-                Text(
-                  'GYM MANAGER',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 5),
-                Text(
-                  'Sistema de Gestión',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // ITEM NUEVO: Aprobación de Socios con badge
-          StreamBuilder<List<Socio>>(
-            stream: _sociosPendientesBroadcast,
-            builder: (context, snapshot) {
-              final countPendientes = snapshot.data?.length ?? 0;
-              
-              return ListTile(
-                leading: Stack(
-                  children: [
-                    Icon(Icons.person_add, color: Colors.orange),
-                    if (countPendientes > 0)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          constraints: BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
-                          ),
-                          child: Text(
-                            countPendientes.toString(),
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                title: Text('Aprobación de Socios'),
-                subtitle: Text('Registros por Telegram'),
-                trailing: countPendientes > 0 
-                    ? Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.orange,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '$countPendientes pendiente${countPendientes > 1 ? 's' : ''}',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      )
-                    : null,
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/aprobacion-socios');
-                },
-              );
-            },
-          ),
-          
-          // ITEM EXISTENTE: Gestión de Socios (accesible para todos los roles)
-          ListTile(
-            leading: Icon(Icons.people, color: Colors.blue),
-            title: Text('Gestión de Socios'),
-            onTap: () {
-              Navigator.pop(context);
-              setState(() {
-                _currentIndex = 0; // Navegar a pantalla de Socios
-              });
-            },
-          ),
-          
-          // NUEVO: Registro de Asistencia
-          ListTile(
-            leading: const Icon(Icons.login, color: Colors.green),
-            title: const Text('Registro de Asistencia'),
-            subtitle: const Text('Control de ingreso al gimnasio'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const RegistroAsistenciaScreen()),
-              );
-            },
-          ),
-          
-          // ITEM EXISTENTE: Dashboard
-          ListTile(
-            leading: Icon(Icons.dashboard, color: Colors.green),
-            title: Text('Dashboard'),
-            onTap: () {
-              Navigator.pop(context);
-              setState(() {
-                _currentIndex = 1; // Navegar a pantalla de Dashboard
-              });
-            },
-          ),
-          
-
-          
-          // ITEM NUEVO: Gestión de Usuarios (solo para admin)
-          Builder(builder: (ctx) {
-            final authState = ctx.read<AuthBloc>().state;
-            String currentRole = '';
-            if (authState is AuthAuthenticatedState) {
-              final user = authState.user;
-              if (user is Map && user['rol'] != null) currentRole = user['rol'];
-            } else if (authState is AuthSuccess) {
-              final user = authState.usuario;
-              if (user is Map && user['rol'] != null) currentRole = user['rol'];
-            }
-
-            if (currentRole == 'admin') {
-              return Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.people_outline, color: Colors.white70),
-                    title: const Text('Gestionar Usuarios', style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/admin-usuarios');
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.history, color: Colors.white70),
-                    title: const Text('Historial de Asistencia', style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const HistorialAsistenciaScreen()),
-                      );
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.security, color: Colors.white70),
-                    title: const Text('Auditoría del Sistema', style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AuditoriaScreen()),
-                      );
-                    },
-                  ),
-                  const Divider(color: Colors.white24),
-                  ListTile(
-                    leading: const Icon(Icons.assignment, color: Colors.white70),
-                    title: const Text('Gestión de Planes', style: TextStyle(color: Colors.white)),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const PlanesListScreen()),
-                      );
-                    },
-                  ),
-                  const Divider(color: Colors.white24),
-                  ListTile(
-                    leading: const Icon(Icons.person_off, color: Colors.white70),
-                    title: const Text('Socios Inactivos', style: TextStyle(color: Colors.white)),
-                    onTap: () async {
-                      Navigator.pop(context);
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const ListaSociosInactivosScreen()),
-                      );
-                      // Al volver, recargar socios activos
-                      if (mounted) {
-                        context.read<SociosBloc>().add(CargarSociosEvent());
-                      }
-                    },
-                  ),
-                ],
-              );
-            }
-
-            return ListTile(
-              leading: Icon(Icons.admin_panel_settings, color: Colors.grey),
-              title: Text('Gestión de Usuarios'),
-              subtitle: Text('Acceso restringido'),
-              onTap: null,
-            );
-          }),
-          
-          Divider(),
-          
-          // ITEM EXISTENTE: Cerrar Sesión
-          ListTile(
-            leading: Icon(Icons.logout, color: Colors.grey),
-            title: Text('Cerrar Sesión'),
-            onTap: () {
-              context.read<AuthBloc>().add(LogoutEvent());
-            },
-          ),
-        ],
-      ),
-    );
-  }
-  
 }

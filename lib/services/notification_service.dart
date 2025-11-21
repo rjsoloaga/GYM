@@ -37,7 +37,13 @@ class NotificationService {
     );
     
     // Configurar el manejador de notificaciones en segundo plano
-    _notificationsPlugin.getNotificationAppLaunchDetails();
+    // Nota: En Linux esta funcionalidad no está implementada, por eso usamos try-catch
+    try {
+      await _notificationsPlugin.getNotificationAppLaunchDetails();
+    } catch (e) {
+      // Ignorar error en Linux - funcionalidad no soportada
+      print('⚠️ getNotificationAppLaunchDetails no soportado en esta plataforma (esperado en Linux)');
+    }
 
     print('Servicio de notificaciones locales inicializado');
   }

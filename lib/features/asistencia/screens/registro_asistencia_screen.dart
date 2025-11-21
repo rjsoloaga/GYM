@@ -38,10 +38,25 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
   }
 
   Future<void> _initTts() async {
-    await _flutterTts.setLanguage("es-ES");
-    await _flutterTts.setSpeechRate(0.5);
-    await _flutterTts.setVolume(1.0);
-    await _flutterTts.setPitch(1.0);
+    try {
+      await _flutterTts.setLanguage("es-ES");
+      await _flutterTts.setSpeechRate(0.5);
+      await _flutterTts.setVolume(1.0);
+      await _flutterTts.setPitch(1.0);
+    } catch (e) {
+      debugPrint('⚠️ TTS no soportado en esta plataforma (esperado en Linux)');
+    }
+  }
+
+  // Helper para hablar con manejo de errores
+  Future<void> _hablar(String texto) async {
+    if (!_sonidosHabilitados) return;
+    
+    try {
+      await _flutterTts.speak(texto);
+    } catch (e) {
+      debugPrint('TTS speak error (ignorado): $e');
+    }
   }
 
   @override
@@ -49,7 +64,12 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
     _dniController.dispose();
     _focusNode.dispose();
     _clearTimer?.cancel();
-    _flutterTts.stop();
+    // Detener TTS de forma segura
+    _flutterTts.stop().catchError((e) {
+      // Ignorar error en plataformas no soportadas
+      debugPrint('⚠️ TTS stop no soportado en esta plataforma');
+      return null;
+    });
     super.dispose();
   }
 
@@ -142,28 +162,20 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
   }
 
   void _reproducirSonidoSegunEstado(String estado, String nombre) async {
-    try {
-      // Solo decir el primer nombre para que sea más rápido
-      final primerNombre = nombre.split(' ')[0];
-      
-      if (estado == 'Vencido') {
-        await _flutterTts.speak("Alto. Cuota vencida.");
-      } else if (estado == 'Por Vencer') {
-        await _flutterTts.speak("Bienvenido $primerNombre. Tu cuota vence pronto.");
-      } else {
-        await _flutterTts.speak("Bienvenido $primerNombre.");
-      }
-    } catch (e) {
-      debugPrint('Error reproduciendo voz: $e');
+    // Solo decir el primer nombre para que sea más rápido
+    final primerNombre = nombre.split(' ')[0];
+    
+    if (estado == 'Vencido') {
+      await _hablar("Alto. Cuota vencida.");
+    } else if (estado == 'Por Vencer') {
+      await _hablar("Bienvenido $primerNombre. Tu cuota vence pronto.");
+    } else {
+      await _hablar("Bienvenido $primerNombre.");
     }
   }
 
   void _reproducirSonidoError() async {
-    try {
-      await _flutterTts.speak("DNI no encontrado.");
-    } catch (e) {
-      debugPrint('Error reproduciendo voz de error: $e');
-    }
+    await _hablar("DNI no encontrado.");
   }
 
   void _mostrarError(String mensaje) {

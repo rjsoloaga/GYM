@@ -26,6 +26,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
 
   DateTime _fechaInicio = DateTime.now();
   DateTime _fechaVencimiento = DateTime.now().add(const Duration(days: 30));
+  DateTime? _fechaNacimiento;
   String _tipoPlan = 'Mensual';
 
   // Lista de opciones válidas para el tipo de plan
@@ -63,6 +64,7 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
     _precioController.text = socio.precioMensual.toString();
     _fechaInicio = socio.fechaInicio;
     _fechaVencimiento = socio.fechaVencimiento;
+    _fechaNacimiento = socio.fechaNacimiento;
     _tipoPlan = _mapTipoPlan(socio.tipoPlan);
   }
 
@@ -76,16 +78,34 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
         _opcionesPlan = planes.isNotEmpty
             ? planes.map((p) => p.nombre).toList()
             : List.from(opcionesPlan);
-        if (!_opcionesPlan.contains(_tipoPlan)) {
-          _tipoPlan = _opcionesPlan.first;
-        }
-        // Actualizar precio automáticamente según el plan seleccionado (tanto para nuevo como para editar)
-        if (_planesActivos.isNotEmpty) {
-          final planSeleccionado = _planesActivos.firstWhere(
-            (p) => p.nombre == _tipoPlan,
-            orElse: () => _planesActivos.first,
+        
+        // Si estamos editando, cargar el plan correcto usando planId
+        if (widget.socioParaEditar != null && widget.socioParaEditar!.planId != null) {
+          final planDelSocio = _planesActivos.firstWhere(
+            (p) => p.id == widget.socioParaEditar!.planId,
+            orElse: () {
+              // Si no encuentra el plan por ID, buscar por nombre
+              return _planesActivos.firstWhere(
+                (p) => p.nombre == widget.socioParaEditar!.tipoPlan,
+                orElse: () => _planesActivos.first,
+              );
+            },
           );
-          _precioController.text = planSeleccionado.precio.toStringAsFixed(2);
+          _tipoPlan = planDelSocio.nombre;
+          _precioController.text = planDelSocio.precio.toStringAsFixed(2);
+        } else {
+          // Para nuevo socio o si no tiene planId, usar el primer plan
+          if (!_opcionesPlan.contains(_tipoPlan)) {
+            _tipoPlan = _opcionesPlan.first;
+          }
+          // Actualizar precio automáticamente según el plan seleccionado
+          if (_planesActivos.isNotEmpty) {
+            final planSeleccionado = _planesActivos.firstWhere(
+              (p) => p.nombre == _tipoPlan,
+              orElse: () => _planesActivos.first,
+            );
+            _precioController.text = planSeleccionado.precio.toStringAsFixed(2);
+          }
         }
       });
     } catch (_) {
@@ -134,6 +154,16 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
       }
     }
 
+    // Obtener el planId del plan seleccionado
+    int? planIdSeleccionado;
+    if (_planesActivos.isNotEmpty) {
+      final planSeleccionado = _planesActivos.firstWhere(
+        (p) => p.nombre == _tipoPlan,
+        orElse: () => _planesActivos.first,
+      );
+      planIdSeleccionado = planSeleccionado.id;
+    }
+
     final socio = widget.socioParaEditar == null
         ? Socio(
             id: null,
@@ -141,20 +171,24 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
             dni: dni,
             telefono: _telefonoController.text.trim(),
             email: _emailController.text.trim(),
+            fechaNacimiento: _fechaNacimiento,
             fechaInicio: _fechaInicio,
             fechaVencimiento: _fechaVencimiento,
             precioMensual: double.tryParse(_precioController.text) ?? 0.0,
             tipoPlan: _tipoPlan,
+            planId: planIdSeleccionado,
           )
         : widget.socioParaEditar!.copyWith(
             nombreCompleto: nombre,
             dni: dni,
             telefono: _telefonoController.text.trim(),
             email: _emailController.text.trim(),
+            fechaNacimiento: _fechaNacimiento,
             fechaInicio: _fechaInicio,
             fechaVencimiento: _fechaVencimiento,
             precioMensual: double.tryParse(_precioController.text) ?? 0.0,
             tipoPlan: _tipoPlan,
+            planId: planIdSeleccionado,
           );
 
     debugPrint('debug: socio final a guardar - ID: ${socio.id}');
@@ -285,6 +319,39 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 16),
+                
+                // Campo Fecha de Nacimiento
+                InkWell(
+                  onTap: () async {
+                    final fecha = await showDatePicker(
+                      context: context,
+                      initialDate: _fechaNacimiento ?? DateTime(2000, 1, 1),
+                      firstDate: DateTime(1900),
+                      lastDate: DateTime.now(),
+                    );
+                    if (fecha != null) {
+                      setState(() => _fechaNacimiento = fecha);
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Fecha de Nacimiento (Opcional)',
+                      prefixIcon: Icon(Icons.cake),
+                      border: OutlineInputBorder(),
+                    ),
+                    child: Text(
+                      _fechaNacimiento != null
+                          ? '${_fechaNacimiento!.day}/${_fechaNacimiento!.month}/${_fechaNacimiento!.year}'
+                          : 'Seleccionar fecha',
+                      style: TextStyle(
+                        color: _fechaNacimiento != null ? Theme.of(context).textTheme.bodyMedium?.color : Theme.of(context).textTheme.bodySmall?.color,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
             TextField(
               controller: _emailController,
               decoration: const InputDecoration(

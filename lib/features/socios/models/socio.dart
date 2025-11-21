@@ -4,6 +4,7 @@ class Socio {
   final String dni;
   final String telefono;
   final String email;
+  final DateTime? fechaNacimiento;
   final DateTime fechaInicio;
   final DateTime fechaVencimiento;
   final double precioMensual;
@@ -21,6 +22,7 @@ class Socio {
     required this.dni,
     required this.telefono,
     required this.email,
+    this.fechaNacimiento,
     required this.fechaInicio,
     required this.fechaVencimiento,
     required this.precioMensual,
@@ -88,6 +90,7 @@ class Socio {
     String? dni,
     String? telefono,
     String? email,
+    DateTime? fechaNacimiento,
     DateTime? fechaInicio,
     DateTime? fechaVencimiento,
     double? precioMensual,
@@ -105,6 +108,7 @@ class Socio {
       dni: dni ?? this.dni,
       telefono: telefono ?? this.telefono,
       email: email ?? this.email,
+      fechaNacimiento: fechaNacimiento ?? this.fechaNacimiento,
       fechaInicio: fechaInicio ?? this.fechaInicio,
       fechaVencimiento: fechaVencimiento ?? this.fechaVencimiento,
       precioMensual: precioMensual ?? this.precioMensual,
@@ -125,6 +129,7 @@ class Socio {
       'dni': dni,
       'telefono': telefono,
       'email': email,
+      'fechaNacimiento': fechaNacimiento?.toIso8601String(),
       'fechaInicio': fechaInicio.toIso8601String(),
       'fechaVencimiento': fechaVencimiento.toIso8601String(),
       'precioMensual': precioMensual,
@@ -145,6 +150,9 @@ class Socio {
       dni: map['dni'] as String? ?? '',
       telefono: map['telefono'] as String? ?? '',
       email: map['email'] as String? ?? '',
+      fechaNacimiento: map['fechaNacimiento'] != null 
+          ? DateTime.parse(map['fechaNacimiento'] as String)
+          : null,
       fechaInicio: DateTime.parse(map['fechaInicio'] as String),
       fechaVencimiento: DateTime.parse(map['fechaVencimiento'] as String),
       precioMensual: (map['precioMensual'] as num?)?.toDouble() ?? 0.0,

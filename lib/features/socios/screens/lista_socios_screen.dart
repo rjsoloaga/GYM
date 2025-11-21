@@ -87,6 +87,9 @@ class _ListaSociosScreenState extends State<ListaSociosScreen> {
     _recuperarChatIdsReales();
     // Cargar socios que pagaron hoy si se necesita ese filtro
     _cargarSociosPagaronHoy();
+    
+    // Asegurar que la lista esté actualizada al entrar
+    context.read<SociosBloc>().add(CargarSociosEvent());
   }
 
   void _recuperarChatIdsReales() async {

@@ -134,7 +134,7 @@ class SocioCard extends StatelessWidget {
                       _actionIconButton(
                         context,
                         icon: Icons.notifications,
-                        tooltip: 'Recordar por Telegram',
+                        tooltip: 'Enviar recordatorio de vencimiento',
                         color: Colors.orange,
                         onPressed: onNotificar,
                       ),

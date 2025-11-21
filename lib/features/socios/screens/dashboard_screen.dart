@@ -6,6 +6,8 @@ import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import 'package:gym/features/socios/screens/lista_socios_screen.dart';
 import 'package:gym/features/dashboard/screens/resumen_ingresos_diarios_screen.dart';
+import 'package:gym/features/asistencia/screens/registro_asistencia_screen.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -36,6 +38,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final ingresosDiarios = await DatabaseHelper.instance.getIngresosDiarios(ahora);
     final cuotasVencidas = await DatabaseHelper.instance.getCuotasVencidas();
     final cuotasPorVencer = await DatabaseHelper.instance.getCuotasPorVencer();
+    final asistenciasHoy = await DatabaseHelper.instance.getAsistenciasHoy();
+    final ingresosUltimosDias = await DatabaseHelper.instance.getIngresosUltimosDias(dias: 7);
+    
     final sociosPorVencer = socios.where((socio) {
       final v = DateTime(socio.fechaVencimiento.year, socio.fechaVencimiento.month, socio.fechaVencimiento.day);
       final dias = v.difference(hoy).inDays;
@@ -47,15 +52,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final dias = v.difference(hoy).inDays;
       return dias < 0; // excluye HOY
     }).toList();
+    
+    // Contar socios al día
+    int alDia = socios.length - cuotasVencidas - cuotasPorVencer;
 
     return {
       'totalSocios': socios.length,
-      'ingresos_diarios': ingresosDiarios, // clave esperada por la UI
+      'ingresos_diarios': ingresosDiarios,
+      'asistencias_hoy': asistenciasHoy,
+      'ingresos_ultimos_dias': ingresosUltimosDias,
       'fecha_actual': ahora,
-      // mantenemos compatibilidad si en otro lugar se usa la antigua
       'ingresosMensuales': ingresosDiarios,
-      'vencidas': cuotasVencidas, // Clave correcta para la UI
-      'por_vencer': cuotasPorVencer, // Clave correcta para la UI
+      'vencidas': cuotasVencidas,
+      'por_vencer': cuotasPorVencer,
+      'al_dia': alDia,
       'cuotasVencidas': cuotasVencidas,
       'cuotasPorVencer': cuotasPorVencer,
       'sociosPorVencer': sociosPorVencer,
@@ -197,9 +207,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         Colors.amber,
                                       ),
                                     ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                              // Tercera fila: Asistencias y Al Día
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const RegistroAsistenciaScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: _buildMetricCard(
+                                        'Asistencias Hoy',
+                                        (stats['asistencias_hoy'] ?? 0).toString(),
+                                        Icons.login,
+                                        Colors.teal,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _buildMetricCard(
+                                      'Al Día',
+                                      al_dia.toString(),
+                                      Icons.check_circle,
+                                      Colors.green,
+                                    ),
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 24),
+                              
+                              // Gráfico de ingresos
+                              _buildGraficoIngresos(stats['ingresos_ultimos_dias'] as List<Map<String, dynamic>>? ?? []),
                               const SizedBox(height: 24),
 
                               // Recordatorios
@@ -479,6 +526,146 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGraficoIngresos(List<Map<String, dynamic>> datos) {
+    if (datos.isEmpty) {
+      return Card(
+        elevation: 4,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.bar_chart, color: Color(0xFF2196F3)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Ingresos de los Últimos 7 Días',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text('No hay datos de ingresos disponibles', style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    double maxY = 0;
+    for (var dato in datos) {
+      final total = (dato['total'] as num?)?.toDouble() ?? 0.0;
+      if (total > maxY) maxY = total;
+    }
+    if (maxY == 0) maxY = 100;
+
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.bar_chart, color: Color(0xFF2196F3)),
+                const SizedBox(width: 8),
+                Text(
+                  'Ingresos de los Últimos 7 Días',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 200,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: maxY * 1.2,
+                  barTouchData: BarTouchData(
+                    enabled: true,
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        final fecha = datos[groupIndex]['fecha'] as DateTime;
+                        final total = (datos[groupIndex]['total'] as num?)?.toDouble() ?? 0.0;
+                        return BarTooltipItem(
+                          '${DateFormat('dd/MM').format(fecha)}\n\$${total.toStringAsFixed(0)}',
+                          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        );
+                      },
+                    ),
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() >= 0 && value.toInt() < datos.length) {
+                            final fecha = datos[value.toInt()]['fecha'] as DateTime;
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                DateFormat('dd/MM').format(fecha),
+                                style: const TextStyle(fontSize: 10),
+                              ),
+                            );
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 50,
+                        getTitlesWidget: (value, meta) {
+                          return Text(
+                            '\$${value.toInt()}',
+                            style: const TextStyle(fontSize: 10),
+                          );
+                        },
+                      ),
+                    ),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: maxY / 5,
+                  ),
+                  borderData: FlBorderData(show: false),
+                  barGroups: List.generate(
+                    datos.length,
+                    (index) {
+                      final total = (datos[index]['total'] as num?)?.toDouble() ?? 0.0;
+                      return BarChartGroupData(
+                        x: index,
+                        barRods: [
+                          BarChartRodData(
+                            toY: total,
+                            color: const Color(0xFF2196F3),
+                            width: 16,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(6),
+                              topRight: Radius.circular(6),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

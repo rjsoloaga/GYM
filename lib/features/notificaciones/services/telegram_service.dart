@@ -4,14 +4,67 @@ import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import 'package:gym/features/planes/models/plan.dart';
 import 'package:gym/features/planes/services/plan_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TelegramService {
-  static const String _botToken = '8597219422:AAEvMJE6tE8-3RnUHSq3MVZvsErLN7_Dw5E';
-  static const String _baseUrl = 'https://api.telegram.org/bot$_botToken';
+  // Token hardcodeado como fallback
+  static const String _defaultBotToken = '8597219422:AAEvMJE6tE8-3RnUHSq3MVZvsErLN7_Dw5E';
+  
+  // Claves para SharedPreferences
+  static const String _keyBotToken = 'telegram_bot_token';
+  static const String _keyEnabled = 'telegram_enabled';
   
   // Mapa para guardar registros en proceso
   static final Map<String, Map<String, dynamic>> _registrosPendientes = {};
   static int _lastUpdateId = 0;
+
+  // === MÉTODOS DE CONFIGURACIÓN ===
+  
+  // Guardar configuración
+  static Future<void> saveConfig({
+    required String botToken,
+    required bool enabled,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyBotToken, botToken);
+    await prefs.setBool(_keyEnabled, enabled);
+  }
+
+  // Obtener configuración
+  static Future<Map<String, dynamic>> getConfig() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      'botToken': prefs.getString(_keyBotToken) ?? _defaultBotToken,
+      'enabled': prefs.getBool(_keyEnabled) ?? true, // true por defecto para mantener compatibilidad
+    };
+  }
+
+  // Verificar si está configurado
+  static Future<bool> isConfigured() async {
+    final config = await getConfig();
+    return (config['botToken'] as String).isNotEmpty;
+  }
+
+  // Verificar si está habilitado
+  static Future<bool> isEnabled() async {
+    final config = await getConfig();
+    return config['enabled'] as bool;
+  }
+
+  // Obtener bot token (con fallback al hardcodeado)
+  static Future<String> _getBotToken() async {
+    final config = await getConfig();
+    final token = config['botToken'] as String;
+    return token.isEmpty ? _defaultBotToken : token;
+  }
+
+  // Obtener base URL dinámica
+  static Future<String> _getBaseUrl() async {
+    final token = await _getBotToken();
+    return 'https://api.telegram.org/bot$token';
+  }
+
+  // === MÉTODOS DE MENSAJERÍA ===
 
   static Future<bool> sendMessage({
     required String chatId,
@@ -22,8 +75,9 @@ class TelegramService {
       print('   ├─ ChatID: $chatId');
       print('   ├─ Mensaje: ${message.substring(0, 50)}...');
       
+      final baseUrl = await _getBaseUrl();
       final response = await http.post(
-        Uri.parse('$_baseUrl/sendMessage'),
+        Uri.parse('$baseUrl/sendMessage'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'chat_id': chatId,
@@ -45,12 +99,40 @@ class TelegramService {
     }
   }
 
+  // Enviar mensaje a un teléfono (busca el chatId en la DB)
+  static Future<bool> enviarMensajeATelefono({
+    required String telefono,
+    required String mensaje,
+  }) async {
+    try {
+      final db = DatabaseHelper.instance;
+      final socio = await db.getSocioPorTelefono(telefono);
+      
+      if (socio == null) {
+        print('❌ No se encontró socio con teléfono: $telefono');
+        return false;
+      }
+      
+      final chatId = socio['telegramChatId'] as String?;
+      if (chatId == null || chatId.isEmpty) {
+        print('❌ Socio sin chatId de Telegram: $telefono');
+        return false;
+      }
+      
+      return await sendMessage(chatId: chatId, message: mensaje);
+    } catch (e) {
+      print('❌ Error en enviarMensajeATelefono: $e');
+      return false;
+    }
+  }
+
   static Future<List<dynamic>> getUpdates() async {
     try {
       _limpiarRegistrosAntiguos();
       
+      final baseUrl = await _getBaseUrl();
       // Usar offset para obtener solo mensajes nuevos
-      final url = '$_baseUrl/getUpdates${_lastUpdateId > 0 ? '?offset=${_lastUpdateId + 1}' : ''}';
+      final url = '$baseUrl/getUpdates${_lastUpdateId > 0 ? '?offset=${_lastUpdateId + 1}' : ''}';
       final response = await http.get(Uri.parse(url));
       
       if (response.statusCode == 200) {
@@ -494,7 +576,8 @@ ahora recibirás recordatorios de pago.
 
   static Future<bool> testConnection() async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/getMe'));
+      final baseUrl = await _getBaseUrl();
+      final response = await http.get(Uri.parse('$baseUrl/getMe'));
       return response.statusCode == 200;
     } catch (e) {
       return false;
