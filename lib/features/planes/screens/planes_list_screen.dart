@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:gym/features/planes/models/plan.dart';
 import 'package:gym/features/planes/services/plan_service.dart';
 import 'package:gym/features/planes/widgets/plan_card.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gym/features/socios/bloc/auth_bloc.dart';
 
 class PlanesListScreen extends StatefulWidget {
   static const routeName = '/planes';
@@ -16,10 +18,18 @@ class _PlanesListScreenState extends State<PlanesListScreen> {
   final PlanService _planService = PlanService();
   late Future<List<Plan>> _planesFuture;
   bool _showInactive = false;
+  bool _esAdmin = false;
 
   @override
   void initState() {
     super.initState();
+    // Determine user role
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticatedState) {
+      _esAdmin = authState.user['rol'] == 'admin';
+    } else if (authState is AuthSuccess) {
+      _esAdmin = authState.usuario['rol'] == 'admin';
+    }
     _loadPlanes();
     
     // Agregar un listener para cuando la pantalla vuelva a estar visible
@@ -346,7 +356,7 @@ class _PlanesListScreenState extends State<PlanesListScreen> {
                         _loadPlanes();
                       }
                     },
-                    onDelete: () => _deletePlan(plan),
+                    onDelete: _esAdmin ? () => _deletePlan(plan) : null,
                   ),
                 );
               },

@@ -8,7 +8,7 @@ import 'package:gym/features/socios/screens/lista_socios_screen.dart';
 import 'package:gym/features/notificaciones/services/chatid_registro_service.dart';
 import 'package:gym/features/notificaciones/services/notificacion_service.dart';
 import 'package:gym/features/socios/screens/aprobacion_socios_screen.dart'; 
-import 'package:gym/features/auth/screens/gestion_usuarios_screen.dart';
+import 'package:gym/features/configuracion/screens/usuarios_screen.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import 'package:gym/features/dashboard/screens/admin_reportes_screen.dart';
 import 'package:gym/features/auth/models/usuario.dart';
@@ -25,6 +25,18 @@ import 'package:gym/features/configuracion/screens/configuracion_general_screen.
 import 'package:gym/features/rutinas/screens/lista_ejercicios_screen.dart';
 import 'package:gym/features/rutinas/screens/lista_rutinas_screen.dart';
 import 'package:gym/features/socios/widgets/side_menu.dart';
+import 'package:gym/features/configuracion/screens/backup_screen.dart';
+import 'package:gym/features/configuracion/screens/license_screen.dart';
+import 'package:gym/features/pos/screens/productos_list_screen.dart';
+import 'package:gym/features/pos/screens/categorias_screen.dart';
+import 'package:gym/features/pos/screens/proveedores_screen.dart';
+import 'package:gym/features/pos/screens/alertas_inventario_screen.dart';
+import 'package:gym/features/pos/screens/movimientos_stock_screen.dart';
+import 'package:gym/features/pos/screens/reportes_inventario_screen.dart';
+import 'package:gym/features/pos/screens/punto_venta_wrapper.dart';
+import 'package:gym/features/pos/screens/historial_ventas_screen.dart';
+import 'package:gym/features/pos/screens/dashboard_ventas_screen.dart';
+import 'package:gym/features/pos/services/lotes_repository.dart';
 import 'package:intl/intl.dart';
 
 
@@ -38,6 +50,7 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0; // Dashboard por defecto
   late final Stream<List<Socio>> _sociosPendientesBroadcast;
+  late final Stream<int> _alertasInventarioBroadcast;
   int _dashboardRefreshKey = 0; // fuerza recreación del dashboard
   Timer? _clockTimer;
   Timer? _clockAlignTimer;
@@ -59,6 +72,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     12: 'Historial de Asistencia',
     13: 'Auditoría del Sistema',
     14: 'Socios Inactivos',
+    15: 'Copias de Seguridad',
+    16: 'Licencia y Suscripción',
+    17: 'Productos',
+    18: 'Categorías de Productos',
+    19: 'Proveedores',
+    20: 'Alertas de Inventario',
+    21: 'Movimientos de Stock',
+    22: 'Reportes de Inventario',
+    23: 'Punto de Venta',
+    24: 'Historial de Ventas',
+    25: 'Dashboard de Ventas',
   };
 
   void _logout(BuildContext context) {
@@ -131,10 +155,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     }
   }
 
+  Stream<int> _alertasInventarioStream() async* {
+    final lotesRepository = LotesRepository();
+    while (true) {
+      try {
+        final count = await lotesRepository.contarAlertasNoLeidas();
+        yield count;
+        await Future.delayed(Duration(seconds: 30));
+      } catch (e) {
+        yield 0;
+        await Future.delayed(Duration(seconds: 30));
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _sociosPendientesBroadcast = _sociosPendientesStream().asBroadcastStream();
+    _alertasInventarioBroadcast = _alertasInventarioStream().asBroadcastStream();
     setState(() {});
     _startClockTimer();
   }
@@ -185,22 +224,28 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   // MENÚ LATERAL
                   StreamBuilder<List<Socio>>(
                     stream: _sociosPendientesBroadcast,
-                    builder: (context, snapshot) {
-                      return SideMenu(
-                        selectedIndex: _currentIndex,
-                        isAdmin: isAdmin,
-                        pendientesCount: snapshot.data?.length ?? 0,
-                        onItemSelected: (index) {
-                          if (index == -1) {
-                            _logout(context);
-                          } else {
-                            setState(() {
-                              _currentIndex = index;
-                              if (index == 0) {
-                                _dashboardRefreshKey++;
+                    builder: (context, sociosSnapshot) {
+                      return StreamBuilder<int>(
+                        stream: _alertasInventarioBroadcast,
+                        builder: (context, alertasSnapshot) {
+                          return SideMenu(
+                            selectedIndex: _currentIndex,
+                            isAdmin: isAdmin,
+                            pendientesCount: sociosSnapshot.data?.length ?? 0,
+                            alertasCount: alertasSnapshot.data ?? 0,
+                            onItemSelected: (index) {
+                              if (index == -1) {
+                                _logout(context);
+                              } else {
+                                setState(() {
+                                  _currentIndex = index;
+                                  if (index == 0) {
+                                    _dashboardRefreshKey++;
+                                  }
+                                });
                               }
-                            });
-                          }
+                            },
+                          );
                         },
                       );
                     }
@@ -215,10 +260,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           height: 60,
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1E1E1E),
+                            color: Theme.of(context).appBarTheme.backgroundColor ?? Theme.of(context).colorScheme.surface,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withOpacity(0.1),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               ),
@@ -229,8 +274,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                             children: [
                               Text(
                                 _titles[_currentIndex] ?? 'Gym Manager',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Theme.of(context).appBarTheme.foregroundColor ?? Theme.of(context).colorScheme.onSurface,
                                   fontSize: 20,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -311,12 +356,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       case 6: return const ConfiguracionGeneralScreen();
       case 7: return const ConfiguracionEmailScreen();
       case 8: return const ConfiguracionRecordatoriosScreen();
-      case 9: return GestionUsuariosScreen();
+      case 9: return const UsuariosScreen();
       case 10: return AprobacionSociosScreen();
       case 11: return const EstadisticasAsistenciaScreen();
       case 12: return const HistorialAsistenciaScreen();
       case 13: return const AuditoriaScreen();
       case 14: return const ListaSociosInactivosScreen();
+      case 15: return const BackupScreen();
+      case 16: return const LicenseScreen();
+      case 17: return const ProductosListScreen();
+      case 18: return const CategoriasScreen();
+      case 19: return const ProveedoresScreen();
+      case 20: return const AlertasInventarioScreen();
+      case 21: return const MovimientosStockScreen();
+      case 22: return const ReportesInventarioScreen();
+      case 23: return const PuntoVentaWrapper();
+      case 24: return const HistorialVentasScreen();
+      case 25: return const DashboardVentasScreen();
       default: return const Center(child: Text('Pantalla no encontrada'));
     }
   }

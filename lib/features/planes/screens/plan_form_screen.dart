@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gym/features/planes/models/plan.dart';
 import 'package:gym/features/planes/services/plan_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:gym/features/socios/bloc/auth_bloc.dart';
 
 class PlanFormScreen extends StatefulWidget {
   static const routeName = '/planes/form';
@@ -19,6 +21,7 @@ class _PlanFormScreenState extends State<PlanFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _planService = PlanService();
   bool _isLoading = false;
+  bool _esAdmin = false; // role flag
   bool _isEditMode = false;
 
   // Controladores
@@ -32,6 +35,13 @@ class _PlanFormScreenState extends State<PlanFormScreen> {
   @override
   void initState() {
     super.initState();
+    // Determine user role
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthAuthenticatedState) {
+      _esAdmin = authState.user['rol'] == 'admin';
+    } else if (authState is AuthSuccess) {
+      _esAdmin = authState.usuario['rol'] == 'admin';
+    }
     // Usar el plan proporcionado directamente o intentar obtenerlo de los argumentos de la ruta
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.plan != null) {
@@ -129,6 +139,7 @@ class _PlanFormScreenState extends State<PlanFormScreen> {
   Widget _buildPrecioField() {
     return TextFormField(
       controller: _precioController,
+      enabled: _esAdmin,
       decoration: const InputDecoration(
         labelText: 'Precio',
         border: OutlineInputBorder(),
@@ -222,7 +233,7 @@ class _PlanFormScreenState extends State<PlanFormScreen> {
       appBar: AppBar(
         title: Text(_isEditMode ? 'Editar Plan' : 'Nuevo Plan'),
         actions: [
-          if (_isEditMode) ..._buildDeleteButton(),
+          if (_isEditMode && _esAdmin) ..._buildDeleteButton(),
         ],
       ),
       body: _isLoading
@@ -275,7 +286,7 @@ class _PlanFormScreenState extends State<PlanFormScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16.0),
                       ),
                     ),
-                    if (_isEditMode) ..._buildDeleteButton(),
+                    if (_isEditMode && _esAdmin) ..._buildDeleteButton(),
                   ],
                 ),
               ),

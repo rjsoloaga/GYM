@@ -53,13 +53,16 @@ class GymConfigService {
     final prefs = await SharedPreferences.getInstance();
     
     if (nombreGym != null) {
-      await prefs.setString(_keyNombreGym, nombreGym);
-      nombreGymNotifier.value = nombreGym; // Notificar cambio
+      // Si el nombre está vacío, usar el valor por defecto
+      final nombreFinal = nombreGym.trim().isEmpty ? _defaultNombreGym : nombreGym.trim();
+      
+      await prefs.setString(_keyNombreGym, nombreFinal);
+      nombreGymNotifier.value = nombreFinal; // Notificar cambio
       
       // Actualizar título de ventana en desktop
       if (!kIsWeb && (Platform.isLinux || Platform.isWindows || Platform.isMacOS)) {
         try {
-          await windowManager.setTitle(nombreGym);
+          await windowManager.setTitle(nombreFinal);
         } catch (e) {
           debugPrint('Error actualizando título de ventana: $e');
         }

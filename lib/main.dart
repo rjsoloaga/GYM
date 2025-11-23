@@ -13,6 +13,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:gym/services/notification_service.dart';
 import 'package:gym/services/background_service.dart';
 import 'package:gym/services/gym_config_service.dart';
+import 'package:gym/services/license_service.dart';
 
 // Tus imports
 import 'package:gym/core/database/database_helper.dart';
@@ -108,6 +109,9 @@ Future<void> main() async {
   } catch (e) {
     print('⚠️ Advertencia: No se pudo verificar el usuario administrador: $e');
   }
+
+  // Inicializar sistema de licencias
+  await LicenseService().initialize();
 
   // Inicializar formato de fechas
   await initializeDateFormatting('es_ES', null);

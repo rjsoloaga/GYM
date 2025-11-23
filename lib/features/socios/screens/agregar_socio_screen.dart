@@ -133,6 +133,50 @@ class _AgregarSocioScreenState extends State<AgregarSocioScreen> {
       return;
     }
 
+    // Validar formato de Email
+    final email = _emailController.text.trim();
+    if (email.isNotEmpty) {
+      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+      if (!emailRegex.hasMatch(email)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('El formato del email no es válido'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    // Validar formato de Teléfono
+    final telefono = _telefonoController.text.trim();
+    if (telefono.isNotEmpty) {
+      // Permitir números, +, -, espacios y paréntesis
+      final telefonoRegex = RegExp(r'^[0-9\+\-\s\(\)]+$');
+      if (!telefonoRegex.hasMatch(telefono) || telefono.replaceAll(RegExp(r'[^0-9]'), '').length < 7) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('El teléfono debe tener al menos 7 dígitos válidos'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
+    // Validar Fecha de Nacimiento
+    if (_fechaNacimiento != null) {
+      if (_fechaNacimiento!.isAfter(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('La fecha de nacimiento no puede ser futura'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
+
     // Validar DNI duplicado
     final socioExistente = await DatabaseHelper.instance.getSocioPorDni(dni);
     if (socioExistente != null) {

@@ -173,6 +173,192 @@ class DatabaseHelper {
     )
   ''';
 
+  // === SISTEMA POS - INVENTARIO Y VENTAS ===
+
+  // Categorías de productos
+  static const String _createCategoriasProductosTableSql = '''
+    CREATE TABLE categorias_productos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL UNIQUE,
+      descripcion TEXT,
+      icono TEXT,
+      color TEXT,
+      activo INTEGER DEFAULT 1,
+      orden INTEGER DEFAULT 0,
+      fechaCreacion TEXT NOT NULL
+    )
+  ''';
+
+  // Proveedores
+  static const String _createProveedoresTableSql = '''
+    CREATE TABLE proveedores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT NOT NULL,
+      razonSocial TEXT,
+      cuit TEXT,
+      telefono TEXT,
+      email TEXT,
+      direccion TEXT,
+      contacto TEXT,
+      notas TEXT,
+      activo INTEGER DEFAULT 1,
+      fechaCreacion TEXT NOT NULL
+    )
+  ''';
+
+  // Productos
+  static const String _createProductosTableSql = '''
+    CREATE TABLE productos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      codigo TEXT UNIQUE,
+      codigoBarras TEXT,
+      nombre TEXT NOT NULL,
+      descripcion TEXT,
+      categoriaId INTEGER NOT NULL,
+      marca TEXT,
+      proveedorId INTEGER,
+      precioCompra REAL NOT NULL DEFAULT 0,
+      precioVenta REAL NOT NULL,
+      margenGanancia REAL,
+      stock INTEGER NOT NULL DEFAULT 0,
+      stockMinimo INTEGER DEFAULT 5,
+      stockMaximo INTEGER,
+      unidadMedida TEXT DEFAULT 'unidad',
+      pesoNeto REAL,
+      imagenUrl TEXT,
+      requiereVencimiento INTEGER DEFAULT 0,
+      activo INTEGER DEFAULT 1,
+      fechaCreacion TEXT NOT NULL,
+      fechaActualizacion TEXT,
+      FOREIGN KEY (categoriaId) REFERENCES categorias_productos(id),
+      FOREIGN KEY (proveedorId) REFERENCES proveedores(id) ON DELETE SET NULL
+    )
+  ''';
+
+  // Lotes de productos (para control de vencimientos)
+  static const String _createLotesProductosTableSql = '''
+    CREATE TABLE lotes_productos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      productoId INTEGER NOT NULL,
+      numeroLote TEXT NOT NULL,
+      fechaVencimiento TEXT,
+      stockLote INTEGER NOT NULL DEFAULT 0,
+      precioCompraLote REAL,
+      fechaIngreso TEXT NOT NULL,
+      proveedorId INTEGER,
+      notas TEXT,
+      FOREIGN KEY (productoId) REFERENCES productos(id) ON DELETE CASCADE,
+      FOREIGN KEY (proveedorId) REFERENCES proveedores(id) ON DELETE SET NULL
+    )
+  ''';
+
+  // Sesiones de Caja
+  static const String _createCajasSesionesTableSql = '''
+    CREATE TABLE cajas_sesiones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      usuarioId INTEGER NOT NULL,
+      fechaApertura TEXT NOT NULL,
+      fechaCierre TEXT,
+      montoInicial REAL NOT NULL,
+      montoFinalEsperado REAL,
+      montoFinalReal REAL,
+      diferencia REAL,
+      estado TEXT NOT NULL, -- 'abierta', 'cerrada'
+      notas TEXT,
+      FOREIGN KEY (usuarioId) REFERENCES usuarios(id)
+    )
+  ''';
+
+  // Movimientos de Caja (Ingresos/Egresos manuales)
+  static const String _createMovimientosCajaTableSql = '''
+    CREATE TABLE movimientos_caja (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cajaId INTEGER NOT NULL,
+      usuarioId INTEGER NOT NULL,
+      tipo TEXT NOT NULL, -- 'ingreso', 'egreso'
+      monto REAL NOT NULL,
+      concepto TEXT NOT NULL,
+      fechaHora TEXT NOT NULL,
+      FOREIGN KEY (cajaId) REFERENCES cajas_sesiones(id),
+      FOREIGN KEY (usuarioId) REFERENCES usuarios(id)
+    )
+  ''';
+
+  // Alertas de inventario
+  static const String _createAlertasInventarioTableSql = '''
+    CREATE TABLE alertas_inventario (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tipo TEXT NOT NULL,
+      productoId INTEGER,
+      loteId INTEGER,
+      mensaje TEXT NOT NULL,
+      prioridad TEXT DEFAULT 'media',
+      leida INTEGER DEFAULT 0,
+      fechaCreacion TEXT NOT NULL,
+      fechaVencimiento TEXT,
+      FOREIGN KEY (productoId) REFERENCES productos(id) ON DELETE CASCADE,
+      FOREIGN KEY (loteId) REFERENCES lotes_productos(id) ON DELETE CASCADE
+    )
+  ''';
+
+  // Movimientos de stock (auditoría)
+  static const String _createStockMovimientosTableSql = '''
+    CREATE TABLE stock_movimientos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      productoId INTEGER NOT NULL,
+      loteId INTEGER,
+      tipo TEXT NOT NULL,
+      cantidad INTEGER NOT NULL,
+      stockAnterior INTEGER NOT NULL,
+      stockNuevo INTEGER NOT NULL,
+      motivo TEXT,
+      referenciaId INTEGER,
+      referenciaTabla TEXT,
+      usuarioId INTEGER,
+      fechaMovimiento TEXT NOT NULL,
+      FOREIGN KEY (productoId) REFERENCES productos(id) ON DELETE CASCADE,
+      FOREIGN KEY (loteId) REFERENCES lotes_productos(id) ON DELETE SET NULL
+    )
+  ''';
+
+  // Ventas
+  static const String _createVentasTableSql = '''
+    CREATE TABLE ventas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      numeroVenta TEXT NOT NULL UNIQUE,
+      fechaVenta TEXT NOT NULL,
+      socioId INTEGER,
+      subtotal REAL NOT NULL,
+      descuento REAL DEFAULT 0,
+      total REAL NOT NULL,
+      estado TEXT DEFAULT 'completada',
+      metodoPago TEXT NOT NULL,
+      observaciones TEXT,
+      usuarioId INTEGER,
+      fechaCreacion TEXT NOT NULL,
+      FOREIGN KEY (socioId) REFERENCES socios(id) ON DELETE SET NULL
+    )
+  ''';
+
+  // Detalles de venta
+  static const String _createDetallesVentaTableSql = '''
+    CREATE TABLE detalles_venta (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ventaId INTEGER NOT NULL,
+      productoId INTEGER NOT NULL,
+      productoNombre TEXT NOT NULL,
+      cantidad INTEGER NOT NULL,
+      precioUnitario REAL NOT NULL,
+      descuento REAL DEFAULT 0,
+      subtotal REAL NOT NULL,
+      loteId INTEGER,
+      FOREIGN KEY (ventaId) REFERENCES ventas(id) ON DELETE CASCADE,
+      FOREIGN KEY (productoId) REFERENCES productos(id) ON DELETE RESTRICT,
+      FOREIGN KEY (loteId) REFERENCES lotes_productos(id) ON DELETE SET NULL
+    )
+  ''';
+
+
 
   Future<Database> _initDatabase() async {
     final databasesPath = await getDatabasesPath();
@@ -181,7 +367,7 @@ class DatabaseHelper {
     // ⚠️ INCREMENTA LA VERSIÓN para crear nuevas tablas
     return await openDatabase(
       path,
-      version: 15, // Incrementado a 15 para agregar rutinas y ejercicios
+      version: 19, // Incrementado a 19 para agregar control de caja
       onCreate: (db, version) async {
         // Crear tabla de usuarios primero
         await db.execute(_createUsuariosTableSql);
@@ -207,14 +393,81 @@ class DatabaseHelper {
         await db.execute(_createRutinaEjerciciosTableSql);
         await db.execute(_createAsignacionRutinasTableSql);
         
+        // Crear tablas del sistema POS
+        await db.execute(_createCategoriasProductosTableSql);
+        await db.execute(_createProveedoresTableSql);
+        await db.execute(_createProductosTableSql);
+        await db.execute(_createLotesProductosTableSql);
+        await db.execute(_createAlertasInventarioTableSql);
+        await db.execute(_createStockMovimientosTableSql);
+        await db.execute(_createVentasTableSql);
+        await db.execute(_createDetallesVentaTableSql);
+
+        // Crear tablas de control de caja
+        await db.execute(_createCajasSesionesTableSql);
+        await db.execute(_createMovimientosCajaTableSql);
+        
+        // Insertar datos iniciales
+        await _crearUsuarioAdmin(db);
+
         // Insertar planes por defecto
         await _crearPlanesPorDefecto(db);
 
         // Insertar plantillas por defecto
         await _crearPlantillasPorDefecto(db);
+        
+        // Insertar categorías de productos por defecto
+        await _crearCategoriasProductosPorDefecto(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         debugPrint('🔄 Actualizando base de datos de versión $oldVersion a $newVersion');
+        
+        // Migración de versión 17 a 18: Añadir tablas de ventas
+        if (oldVersion < 18) {
+          try {
+            await db.execute(_createVentasTableSql);
+            await db.execute(_createDetallesVentaTableSql);
+            debugPrint('✅ Tablas de ventas creadas correctamente');
+          } catch (e) {
+            debugPrint('⚠️ Error creando tablas de ventas: $e');
+          }
+        }
+        
+        // Migración de versión 16 a 17: Añadir tabla de movimientos de stock
+        if (oldVersion < 17) {
+          try {
+            await db.execute(_createStockMovimientosTableSql);
+            debugPrint('✅ Tabla stock_movimientos creada correctamente');
+          } catch (e) {
+            debugPrint('⚠️ Error creando tabla stock_movimientos: $e');
+          }
+        }
+        
+        // Migración de versión 15 a 16: Añadir tablas del sistema POS
+        if (oldVersion < 16) {
+          try {
+            await db.execute(_createCategoriasProductosTableSql);
+            await db.execute(_createProveedoresTableSql);
+            await db.execute(_createProductosTableSql);
+            await db.execute(_createLotesProductosTableSql);
+            await db.execute(_createAlertasInventarioTableSql);
+            await _crearCategoriasProductosPorDefecto(db);
+            debugPrint('✅ Tablas del sistema POS creadas correctamente');
+          } catch (e) {
+            debugPrint('⚠️ Error creando tablas POS (pueden ya existir): $e');
+          }
+        }
+
+        // Migración de versión 18 a 19: Añadir tablas de control de caja
+        if (oldVersion < 19) {
+          try {
+            await db.execute(_createCajasSesionesTableSql);
+            await db.execute(_createMovimientosCajaTableSql);
+            debugPrint('✅ Tablas de control de caja creadas correctamente');
+          } catch (e) {
+            debugPrint('⚠️ Error creando tablas de caja (pueden ya existir): $e');
+          }
+        }
         
         // Migración de versión 14 a 15: Añadir tablas de rutinas
         if (oldVersion < 15) {
@@ -756,6 +1009,67 @@ Todo el equipo de {gimnasio} te desea un día increíble lleno de alegría y sal
       }
     }
   }
+
+  // Crear categorías de productos por defecto
+  static Future<void> _crearCategoriasProductosPorDefecto(Database db) async {
+    final categorias = [
+      {
+        'nombre': 'Suplementos',
+        'descripcion': 'Proteínas, creatinas, aminoácidos, etc.',
+        'icono': 'fitness_center',
+        'color': '#FF5722',
+        'activo': 1,
+        'orden': 1,
+        'fechaCreacion': DateTime.now().toIso8601String(),
+      },
+      {
+        'nombre': 'Bebidas',
+        'descripcion': 'Bebidas energéticas, isotónicas, agua',
+        'icono': 'local_drink',
+        'color': '#2196F3',
+        'activo': 1,
+        'orden': 2,
+        'fechaCreacion': DateTime.now().toIso8601String(),
+      },
+      {
+        'nombre': 'Snacks',
+        'descripcion': 'Barras proteicas, frutos secos, etc.',
+        'icono': 'fastfood',
+        'color': '#FFC107',
+        'activo': 1,
+        'orden': 3,
+        'fechaCreacion': DateTime.now().toIso8601String(),
+      },
+      {
+        'nombre': 'Accesorios',
+        'descripcion': 'Guantes, muñequeras, cinturones, etc.',
+        'icono': 'shopping_bag',
+        'color': '#9C27B0',
+        'activo': 1,
+        'orden': 4,
+        'fechaCreacion': DateTime.now().toIso8601String(),
+      },
+      {
+        'nombre': 'Indumentaria',
+        'descripcion': 'Remeras, shorts, calzas, etc.',
+        'icono': 'checkroom',
+        'color': '#4CAF50',
+        'activo': 1,
+        'orden': 5,
+        'fechaCreacion': DateTime.now().toIso8601String(),
+      },
+    ];
+
+    for (var categoria in categorias) {
+      try {
+        await db.insert('categorias_productos', categoria);
+      } catch (e) {
+        // Ignorar si ya existe
+        debugPrint('Categoría ya existe: ${categoria['nombre']}');
+      }
+    }
+  }
+
 
 
   // Crear usuario admin
