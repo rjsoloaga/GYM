@@ -103,25 +103,41 @@ class _DashboardVentasScreenState extends State<DashboardVentasScreen> {
               const SizedBox(height: 24),
 
               // 2. Gráfico de Ventas (Últimos 7 días)
-              const Text('Ventas Últimos 7 Días', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              Container(
-                height: 200,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
-                  ],
-                ),
-                child: _ventas7Dias.isEmpty
-                    ? const Center(child: Text('No hay datos suficientes'))
-                    : Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: _buildBarChart(),
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Ventas Últimos 7 Días',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            'Total en \$',
+                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          ),
+                        ],
                       ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 180,
+                        child: _ventas7Dias.isEmpty
+                            ? const Center(child: Text('No hay datos de ventas'))
+                            : Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: _buildBarChart(),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
 
@@ -214,24 +230,34 @@ class _DashboardVentasScreenState extends State<DashboardVentasScreen> {
       final total = (item['total'] as num).toDouble();
       final fecha = DateTime.parse(item['fecha'] as String);
       final heightFactor = total / maxVal;
+      
+      // Formato: "22\nNov" para mostrar día y mes
       final dia = fecha.day.toString();
+      final mes = DateFormat('MMM', 'es_ES').format(fecha);
 
       return Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Tooltip(
-            message: '\$${total.toStringAsFixed(2)}',
-            child: Container(
-              width: 30,
-              height: (150 * heightFactor).clamp(10.0, 150.0), // Asegurar altura mínima y máxima
-              decoration: BoxDecoration(
-                color: Colors.blue,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+          Flexible(
+            child: Tooltip(
+              message: '\$${total.toStringAsFixed(2)}',
+              child: Container(
+                width: 30,
+                height: (140 * heightFactor).clamp(10.0, 140.0), // Reducido de 150 a 140
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(dia, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Column(
+            children: [
+              Text(dia, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              Text(mes, style: TextStyle(fontSize: 9, color: Colors.grey[600])),
+            ],
+          ),
         ],
       );
     }).toList();
