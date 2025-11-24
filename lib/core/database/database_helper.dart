@@ -358,6 +358,16 @@ class DatabaseHelper {
     )
   ''';
 
+  // Tabla de asistencia (check-in QR)
+  static const String _createAsistenciaTableSql = '''
+    CREATE TABLE asistencia (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      socioId INTEGER NOT NULL,
+      fechaHora TEXT NOT NULL,
+      tipo TEXT NOT NULL DEFAULT 'entrada',
+      FOREIGN KEY (socioId) REFERENCES socios(id) ON DELETE CASCADE
+    )
+  ''';
 
 
   Future<Database> _initDatabase() async {
@@ -367,7 +377,7 @@ class DatabaseHelper {
     // ⚠️ INCREMENTA LA VERSIÓN para crear nuevas tablas
     return await openDatabase(
       path,
-      version: 19, // Incrementado a 19 para agregar control de caja
+      version: 21, // Incrementado a 21 para corregir migración de check-in QR
       onCreate: (db, version) async {
         // Crear tabla de usuarios primero
         await db.execute(_createUsuariosTableSql);
@@ -406,6 +416,9 @@ class DatabaseHelper {
         // Crear tablas de control de caja
         await db.execute(_createCajasSesionesTableSql);
         await db.execute(_createMovimientosCajaTableSql);
+        
+        // Crear tabla de asistencia (check-in QR)
+        await db.execute(_createAsistenciaTableSql);
         
         // Insertar datos iniciales
         await _crearUsuarioAdmin(db);
@@ -466,6 +479,69 @@ class DatabaseHelper {
             debugPrint('✅ Tablas de control de caja creadas correctamente');
           } catch (e) {
             debugPrint('⚠️ Error creando tablas de caja (pueden ya existir): $e');
+          }
+        }
+        
+        // Migración de versión 19 a 20: Añadir check-in QR
+        if (oldVersion < 20) {
+          try {
+            // Añadir columna qr_code a socios (sin UNIQUE, se agrega después)
+            await db.execute('ALTER TABLE socios ADD COLUMN qr_code TEXT');
+            debugPrint('✅ Columna qr_code añadida a tabla socios');
+            
+            // Crear tabla de asistencia
+            await db.execute(_createAsistenciaTableSql);
+            debugPrint('✅ Tabla asistencia creada correctamente');
+            
+            // Generar QR codes para socios existentes
+            await _generarQrCodesExistentes(db);
+            debugPrint('✅ QR codes generados para socios existentes');
+            
+            // Crear índice único para qr_code
+            await db.execute('CREATE UNIQUE INDEX idx_socios_qr_code ON socios(qr_code)');
+            debugPrint('✅ Índice único creado para qr_code');
+          } catch (e) {
+            debugPrint('⚠️ Error en migración de check-in QR: $e');
+          }
+        }
+        
+        // Migración de versión 20 a 21: Corregir check-in QR (sin UNIQUE en ALTER TABLE)
+        if (oldVersion < 21) {
+          try {
+            // Verificar si la columna ya existe
+            final tableInfo = await db.rawQuery('PRAGMA table_info(socios)');
+            final hasQrCode = tableInfo.any((col) => col['name'] == 'qr_code');
+            
+            if (!hasQrCode) {
+              // Añadir columna qr_code a socios
+              await db.execute('ALTER TABLE socios ADD COLUMN qr_code TEXT');
+              debugPrint('✅ Columna qr_code añadida a tabla socios');
+            }
+            
+            // Verificar si la tabla asistencia existe
+            final tables = await db.rawQuery(
+              "SELECT name FROM sqlite_master WHERE type='table' AND name='asistencia'"
+            );
+            
+            if (tables.isEmpty) {
+              // Crear tabla de asistencia
+              await db.execute(_createAsistenciaTableSql);
+              debugPrint('✅ Tabla asistencia creada correctamente');
+            }
+            
+            // Generar QR codes para socios existentes
+            await _generarQrCodesExistentes(db);
+            debugPrint('✅ QR codes generados para socios existentes');
+            
+            // Crear índice único para qr_code si no existe
+            try {
+              await db.execute('CREATE UNIQUE INDEX idx_socios_qr_code ON socios(qr_code)');
+              debugPrint('✅ Índice único creado para qr_code');
+            } catch (e) {
+              debugPrint('ℹ️ Índice qr_code ya existe o no se pudo crear: $e');
+            }
+          } catch (e) {
+            debugPrint('⚠️ Error en migración v21 de check-in QR: $e');
           }
         }
         
@@ -1843,5 +1919,32 @@ Todo el equipo de {gimnasio} te desea un día increíble lleno de alegría y sal
       ORDER BY r.fechaEnvio DESC
       LIMIT ?
     ''', [limit]);
+  }
+
+  // Generar QR codes para socios existentes (migración)
+  Future<void> _generarQrCodesExistentes(Database db) async {
+    final socios = await db.query('socios', columns: ['id', 'qr_code']);
+    
+    for (final socio in socios) {
+      final id = socio['id'] as int;
+      final existingQr = socio['qr_code'] as String?;
+      
+      if (existingQr == null || existingQr.isEmpty) {
+        final qrCode = _generateUuid();
+        await db.update(
+          'socios',
+          {'qr_code': qrCode},
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      }
+    }
+  }
+
+  // Generar UUID simple para QR codes
+  String _generateUuid() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = (timestamp * 1000 + (timestamp % 1000)).toString();
+    return 'GYM-$random';
   }
 }
