@@ -306,6 +306,7 @@ Si ya realizaste el pago, por favor ignora este mensaje.
             nombreSocio: nombre,
             fechaVencimiento: DateFormat('dd/MM/yyyy').format(fechaVencimiento),
             diasRestantes: diasRestantes,
+            aliasTransferencia: alias,
           );
           
           final enlace = _whatsappService.generarEnlaceWhatsApp(

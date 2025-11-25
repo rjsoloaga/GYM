@@ -233,7 +233,12 @@ class _PlanFormScreenState extends State<PlanFormScreen> {
       appBar: AppBar(
         title: Text(_isEditMode ? 'Editar Plan' : 'Nuevo Plan'),
         actions: [
-          if (_isEditMode && _esAdmin) ..._buildDeleteButton(),
+          if (_isEditMode && _esAdmin)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              tooltip: 'Eliminar Plan',
+              onPressed: _isLoading ? null : _confirmDelete,
+            ),
         ],
       ),
       body: _isLoading
@@ -286,7 +291,12 @@ class _PlanFormScreenState extends State<PlanFormScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16.0),
                       ),
                     ),
-                    if (_isEditMode && _esAdmin) ..._buildDeleteButton(),
+                    if (_isEditMode && _esAdmin)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              tooltip: 'Eliminar Plan',
+              onPressed: _isLoading ? null : _confirmDelete,
+            ),
                   ],
                 ),
               ),

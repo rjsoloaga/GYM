@@ -4,7 +4,7 @@ import 'package:gym/core/database/database_helper.dart';
 import 'package:gym/features/socios/models/socio.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_tts/flutter_tts.dart';
+// import 'package:flutter_tts/flutter_tts.dart'; // TTS Deshabilitado
 import 'dart:async';
 
 class RegistroAsistenciaScreen extends StatefulWidget {
@@ -22,7 +22,7 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
   String? _ultimoEstado;
   DateTime? _ultimaHora;
   bool _procesando = false;
-  final FlutterTts _flutterTts = FlutterTts();
+  // final FlutterTts _flutterTts = FlutterTts(); // TTS Deshabilitado
   bool _sonidosHabilitados = true;
   Timer? _clearTimer;
 
@@ -30,13 +30,14 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
   void initState() {
     super.initState();
     _cargarPreferenciaSonidos();
-    _initTts();
+    // _initTts(); // TTS Deshabilitado
     // Auto-focus en el campo de DNI
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
   }
 
+  /* TTS Deshabilitado
   Future<void> _initTts() async {
     try {
       await _flutterTts.setLanguage("es-ES");
@@ -47,16 +48,19 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
       debugPrint('⚠️ TTS no soportado en esta plataforma (esperado en Linux)');
     }
   }
+  */
 
   // Helper para hablar con manejo de errores
   Future<void> _hablar(String texto) async {
     if (!_sonidosHabilitados) return;
     
+    /* TTS Deshabilitado
     try {
       await _flutterTts.speak(texto);
     } catch (e) {
       debugPrint('TTS speak error (ignorado): $e');
     }
+    */
   }
 
   @override
@@ -65,11 +69,13 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
     _focusNode.dispose();
     _clearTimer?.cancel();
     // Detener TTS de forma segura
+    /* TTS Deshabilitado
     _flutterTts.stop().catchError((e) {
       // Ignorar error en plataformas no soportadas
       debugPrint('⚠️ TTS stop no soportado en esta plataforma');
       return null;
     });
+    */
     super.dispose();
   }
 
@@ -229,145 +235,147 @@ class _RegistroAsistenciaScreenState extends State<RegistroAsistenciaScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            // Campo de entrada DNI
-            Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: TextField(
-                  controller: _dniController,
-                  focusNode: _focusNode,
-                  keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                  decoration: const InputDecoration(
-                    labelText: 'Ingrese DNI',
-                    hintText: '12345678',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.badge, size: 32),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              // Campo de entrada DNI
+              Card(
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: TextField(
+                    controller: _dniController,
+                    focusNode: _focusNode,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    decoration: const InputDecoration(
+                      labelText: 'Ingrese DNI',
+                      hintText: '12345678',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.badge, size: 32),
+                    ),
+                    onSubmitted: (_) => _registrarAsistencia(),
                   ),
-                  onSubmitted: (_) => _registrarAsistencia(),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            
-            // Botón de registro
-            ElevatedButton.icon(
-              onPressed: _procesando ? null : _registrarAsistencia,
-              icon: _procesando 
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.login, size: 32),
-              label: Text(
-                _procesando ? 'Procesando...' : 'Registrar Ingreso',
-                style: const TextStyle(fontSize: 20),
+              const SizedBox(height: 24),
+              
+              // Botón de registro
+              ElevatedButton.icon(
+                onPressed: _procesando ? null : _registrarAsistencia,
+                icon: _procesando 
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.login, size: 32),
+                label: Text(
+                  _procesando ? 'Procesando...' : 'Registrar Ingreso',
+                  style: const TextStyle(fontSize: 20),
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
               ),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 20),
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-            ),
-            
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 16),
-            
-            // Feedback visual del último registro
-            if (_ultimoSocio != null) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'ÚLTIMO REGISTRO',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
-                  ),
-                  TextButton.icon(
-                    onPressed: _limpiarFeedback,
-                    icon: const Icon(Icons.clear, size: 16),
-                    label: const Text('Limpiar'),
-                  ),
-                ],
-              ),
+              
+              const SizedBox(height: 32),
+              const Divider(),
               const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: _getColorEstado(_ultimoEstado!).withOpacity(0.1),
-                  border: Border.all(color: _getColorEstado(_ultimoEstado!), width: 3),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
+              
+              // Feedback visual del último registro
+              if (_ultimoSocio != null) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(
-                      _getIconoEstado(_ultimoEstado!),
-                      size: 80,
-                      color: _getColorEstado(_ultimoEstado!),
+                    const Text(
+                      'ÚLTIMO REGISTRO',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _ultimoSocio!.nombreCompleto,
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'DNI: ${_ultimoSocio!.dni}',
-                      style: const TextStyle(fontSize: 20, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: _getColorEstado(_ultimoEstado!),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Text(
-                        _ultimoEstado!.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Vence: ${DateFormat('dd/MM/yyyy').format(_ultimoSocio!.fechaVencimiento)}',
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Hora: ${DateFormat('HH:mm:ss').format(_ultimaHora!)}',
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    TextButton.icon(
+                      onPressed: _limpiarFeedback,
+                      icon: const Icon(Icons.clear, size: 16),
+                      label: const Text('Limpiar'),
                     ),
                   ],
                 ),
-              ),
-            ] else ...[
-              const SizedBox(height: 100),
-              Icon(Icons.qr_code_scanner, size: 120, color: Colors.grey[300]),
-              const SizedBox(height: 16),
-              Text(
-                'Esperando registro...',
-                style: TextStyle(fontSize: 20, color: Colors.grey[400]),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'El feedback se limpiará automáticamente en 5 segundos',
-                style: TextStyle(fontSize: 14, color: Colors.grey[400]),
-                textAlign: TextAlign.center,
-              ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: _getColorEstado(_ultimoEstado!).withOpacity(0.1),
+                    border: Border.all(color: _getColorEstado(_ultimoEstado!), width: 3),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        _getIconoEstado(_ultimoEstado!),
+                        size: 80,
+                        color: _getColorEstado(_ultimoEstado!),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _ultimoSocio!.nombreCompleto,
+                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'DNI: ${_ultimoSocio!.dni}',
+                        style: const TextStyle(fontSize: 20, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: _getColorEstado(_ultimoEstado!),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Text(
+                          _ultimoEstado!.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Vence: ${DateFormat('dd/MM/yyyy').format(_ultimoSocio!.fechaVencimiento)}',
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Hora: ${DateFormat('HH:mm:ss').format(_ultimaHora!)}',
+                        style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 100),
+                Icon(Icons.qr_code_scanner, size: 120, color: Colors.grey[300]),
+                const SizedBox(height: 16),
+                Text(
+                  'Esperando registro...',
+                  style: TextStyle(fontSize: 20, color: Colors.grey[400]),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'El feedback se limpiará automáticamente en 5 segundos',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

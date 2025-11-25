@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -8,6 +9,10 @@ class AuthService {
   // Verificar si el dispositivo soporta autenticación biométrica
   static Future<bool> isBiometricAvailable() async {
     try {
+      // Desactivar biometría en Windows y Web
+      if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+        return false;
+      }
       return await _auth.canCheckBiometrics;
     } catch (e) {
       return false;

@@ -1,4 +1,4 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+﻿import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_local_notifications_linux/flutter_local_notifications_linux.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -19,6 +19,14 @@ class NotificationService {
       requestSoundPermission: true,
     );
 
+    // Configuración para Windows
+    const WindowsInitializationSettings initializationSettingsWindows =
+        WindowsInitializationSettings(
+      appName: 'GYM',
+      appUserModelId: 'com.gym.app',
+      guid: 'a7c44d7b-8f3e-4c9a-9e1f-2d3c4b5a6e7f',
+    );
+
     final InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
@@ -26,6 +34,7 @@ class NotificationService {
         defaultActionName: 'Abrir',
         defaultIcon: AssetsLinuxIcon('assets/icon.png'),
       ),
+      windows: initializationSettingsWindows,
     );
 
     // Inicializar el plugin de notificaciones

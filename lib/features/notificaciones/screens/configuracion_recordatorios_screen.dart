@@ -126,8 +126,8 @@ class _ConfiguracionRecordatoriosScreenState extends State<ConfiguracionRecordat
       return;
     }
 
-    if (!_canalEmail && !_canalTelegram) {
-      _mostrarError('Debes activar al menos un canal (Email o Telegram).');
+    if (!_canalEmail && !_canalTelegram && !_canalWhatsApp) {
+      _mostrarError('Debes activar al menos un canal (Email, Telegram o WhatsApp).');
       return;
     }
 
@@ -605,23 +605,23 @@ class _ConfiguracionRecordatoriosScreenState extends State<ConfiguracionRecordat
                       },
                     ),
                     const Divider(height: 1, color: Colors.white12),
-                    // WhatsApp deshabilitado temporalmente (solo Windows)
-                    Opacity(
-                      opacity: 0.5,
-                      child: CheckboxListTile(
-                        title: const Text(
-                          'WhatsApp',
-                          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-                        ),
-                        subtitle: const Text(
-                          'Disponible solo en Windows',
-                          style: TextStyle(color: Colors.orange),
-                        ),
-                        secondary: const Icon(Icons.chat_bubble, color: Colors.green, size: 28),
-                        value: false,
-                        enabled: false,
-                        onChanged: null,
+                    CheckboxListTile(
+                      title: const Text(
+                        'WhatsApp',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
                       ),
+                      subtitle: const Text(
+                        'Genera enlaces wa.me para enviar mensajes',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      secondary: const Icon(Icons.chat_bubble, color: Colors.green, size: 28),
+                      value: _canalWhatsApp,
+                      activeColor: Colors.deepPurple,
+                      checkColor: Colors.white,
+                      onChanged: (value) {
+                        setState(() => _canalWhatsApp = value ?? false);
+                        _guardarConfiguracion();
+                      },
                     ),
                   ],
                 ),
