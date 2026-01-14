@@ -59,7 +59,7 @@ class SociosBloc extends Bloc<SocioEvent, SociosState> {
   ) async {
     print('Bloc: Actualizando socio ID: ${event.socio.id}');
     try {
-      final resultado = await databaseHelper.updateSocio(event.socio);
+      await databaseHelper.updateSocio(event.socio);
       // Recargar la lista despues de actualizar
       add(CargarSociosEvent());
     } catch (e) {

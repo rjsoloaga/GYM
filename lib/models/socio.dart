@@ -5,6 +5,7 @@ class Socio {
     final String nombreCompleto;
     final String dni;
     final String telefono;
+    final String correo;
     final DateTime fechaInicio;
     final DateTime fechaVencimiento;
     final double precioMensual;
@@ -16,6 +17,7 @@ class Socio {
         required this.nombreCompleto,
         required this.dni,
         required this.telefono,
+        required this.correo,
         required this.fechaInicio,
         required this.fechaVencimiento,
         required this.precioMensual,
@@ -23,17 +25,20 @@ class Socio {
     });
 
     //Metodo getter para obtener el estado de la cuota
-    //Devuelve 'Verde' si la cuota esta vencida, 'Amarillo' si falta menos de 15 dias y 'Rojo' si esta vencida
+    //Devuelve 'Verde' si la cuota está al día, 'Ambar' si falta menos de 15 días y 'Rojo' si está vencida
     String get estadoCuota{
         final hoy = DateTime.now();
         final diferencia = fechaVencimiento.difference(hoy).inDays;
 
-        if (diferencia >= 0) { 
-            return 'Verde';
-        } else if (diferencia.abs() <= 15) {
-            return 'Ambar';
+        if (diferencia < 0) {
+            // Está vencida
+            if (diferencia.abs() <= 15) {
+                return 'Ambar'; // Vencida hace menos de 15 días
+            } else {
+                return 'Rojo'; // Vencida hace más de 15 días
+            }
         } else {
-            return 'Rojo';
+            return 'Verde'; // No está vencida
         }
     }
 
@@ -44,6 +49,7 @@ class Socio {
         String? nombreCompleto,
         String? dni,
         String? telefono,
+        String? correo,
         DateTime? fechaInicio,
         DateTime? fechaVencimiento,
         double? precioMensual,
@@ -54,6 +60,7 @@ class Socio {
             nombreCompleto: nombreCompleto ?? this.nombreCompleto,
             dni: dni ?? this.dni,
             telefono: telefono ?? this.telefono,
+            correo: correo ?? this.correo,
             fechaInicio: fechaInicio ?? this.fechaInicio,
             fechaVencimiento: fechaVencimiento ?? this.fechaVencimiento,
             precioMensual: precioMensual ?? this.precioMensual,
@@ -68,6 +75,7 @@ class Socio {
       'nombreCompleto': nombreCompleto,
       'dni': dni,
       'telefono': telefono,
+      'correo': correo,
       'fechaInicio': fechaInicio.toIso8601String(),
       'fechaVencimiento': fechaVencimiento.toIso8601String(),
       'precioMensual': precioMensual,
@@ -87,6 +95,7 @@ class Socio {
             nombreCompleto: map['nombreCompleto'],
             dni: map['dni'],
             telefono: map['telefono'],
+            correo: map['correo'] ?? '', // Valor por defecto para compatibilidad con datos existentes
             fechaInicio: DateTime.parse(map['fechaInicio']),//Convertimos el String de la BD de vuelta a DateTime
             fechaVencimiento: DateTime.parse(map['fechaVencimiento']),
             precioMensual: map['precioMensual'],

@@ -1,8 +1,52 @@
+# Git
 .git
 .gitignore
-.dockerignore
+.gitattributes
+
+# Docker
 Dockerfile
 docker-compose.yml
-build/
+.dockerignore
+
+# Flutter/Dart
 .dart_tool/
 .packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Archivos temporales
+*.odt
+pasoApaso.txt
+error*.png
+agregarFalla.png
+chupalafranco.png
+estructura.png
+
+# Base de datos local
+*.db
+*.sqlite
+*.sqlite3
+
+# Documentación generada
+GUIA_CREAR_PR.md
+PR_DESCRIPTION.md
